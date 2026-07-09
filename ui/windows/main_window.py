@@ -71,6 +71,7 @@ class MainWindow(QMainWindow):
         self.journal_page = JournalWindow()
         self.game_hub_page.journal_requested.connect(self.go_to_journal_page)
         self.journal_page.back_requested.connect(self.go_to_game_hub)
+        self.journal_page.view_requested.connect(self.go_to_diary_page)
 
         # build writing page
         self.writing_page = WritingPage()

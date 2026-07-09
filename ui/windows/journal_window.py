@@ -16,6 +16,7 @@ class JournalWindow(QWidget):
     entry_opened = Signal(dict)
     start_requested = Signal(dict)
     finished_requested = Signal(dict)
+    view_requested = Signal(dict)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -67,8 +68,8 @@ class JournalWindow(QWidget):
         self.add_btn = SimpleButton("Add", "animatedbutton", w=60, h=30)
         self.edit_btn = SimpleButton("Edit", "animatedbutton", w=60, h=30)
         self.delete_btn = SimpleButton("Delete", "animatedbutton", w=95, h=30)
-        self.sort_btn = SimpleButton("Sort", "animatedbutton", w=60, h=30)
-        for btn in (self.add_btn, self.edit_btn, self.delete_btn, self.sort_btn):
+        self.view_btn = SimpleButton("View", "animatedbutton", w=60, h=30)
+        for btn in (self.add_btn, self.edit_btn, self.delete_btn, self.view_btn):
             button_row.addWidget(btn)
         left_col.addLayout(button_row)
 
@@ -153,6 +154,7 @@ class JournalWindow(QWidget):
         self.add_btn.clicked.connect(self._on_add_clicked)
         self.edit_btn.clicked.connect(self._on_edit_clicked)
         self.delete_btn.clicked.connect(self._on_delete_clicked)
+        self.view_btn.clicked.connect(self._on_view_clicked)
 
     def _on_add_clicked(self):
         self.add_entry_modal.open_modal()
@@ -211,6 +213,10 @@ class JournalWindow(QWidget):
     def _on_finished_clicked(self):
         if self._current_entry:
             self.finished_requested.emit(self._current_entry)
+
+    def _on_view_clicked(self):
+        if self._current_entry:
+            self.view_requested.emit(self._current_entry)
 
     def _on_entry_clicked(self, index):
         entry_data = index.data(Qt.UserRole)
