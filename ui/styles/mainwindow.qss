@@ -421,3 +421,113 @@ QComboBox#addentryfield::down-arrow {
 #highlightscrollarea QScrollBar::sub-page:vertical {
     background: none;
 }
+
+
+
+
+/* ===== Photo Book (Album) ===== */
+#albumwindow {
+    background-color: #4C0033;
+}
+#albumpagetitle {
+    font-family: ByteBounce;
+    font-size: 40px;
+    color: #E80F88;
+    padding-left: 10px;
+}
+#albumscrollarea, #albumscrollarea > QWidget > QWidget {
+    background-color: transparent;
+    border: none;
+}
+#photothumbnail {
+    background-color: #420516;
+    border: 2px solid #E63E6D;
+    border-radius: 8px;
+}
+#photothumbnail:hover {
+    border: 2px solid #E80F88;
+    background-color: #6C0053;
+}
+#albumempty {
+    font-family: ByteBounce;
+    font-size: 24px;
+    color: #E80F88;
+}
+
+#albumscrollarea QScrollBar:vertical {
+    background: #4C0033;
+    width: 14px;
+    margin: 0px;
+    border-radius: 7px;
+}
+#albumscrollarea QScrollBar::handle:vertical {
+    background: #9C0073;
+    min-height: 30px;
+    border-radius: 7px;
+}
+#albumscrollarea QScrollBar::handle:vertical:hover {
+    background: #E80F88;
+}
+#albumscrollarea QScrollBar::add-line:vertical,
+#albumscrollarea QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+#albumscrollarea QScrollBar::add-page:vertical,
+#albumscrollarea QScrollBar::sub-page:vertical {
+    background: none;
+}
+
+/* ===== Photo Filter Modal ===== */
+#photofiltermodal {
+    background-color: rgba(0, 0, 0, 170);
+}
+#photofiltercard {
+    background-color: #4C0033;
+    border: 2px solid #5B23FF;
+    border-radius: 12px;
+}
+#photofilterheader {
+    font-family: ByteBounce;
+    font-size: 32px;
+    color: #E80F88;
+}
+#photofilterscrollarea, #photofilterscrollarea > QWidget > QWidget {
+    background-color: transparent;
+    border: none;
+}
+
+/* ===== Photo Viewer Modal ===== */
+#photoviewermodal {
+    background-color: rgba(0, 0, 0, 200);
+}
+#photoviewercard {
+    background-color: #1e1e1e;
+    border: 2px solid #E63E6D;
+    border-radius: 12px;
+}
+#photoviewerimage {
+    background-color: #000000;
+    border-radius: 8px;
+}
+#photofilterscrollarea QScrollBar:horizontal {
+    background: #4C0033;
+    height: 14px;
+    margin: 0px;
+    border-radius: 7px;
+}
+#photofilterscrollarea QScrollBar::handle:horizontal {
+    background: #9C0073;
+    min-width: 30px;
+    border-radius: 7px;
+}
+#photofilterscrollarea QScrollBar::handle:horizontal:hover {
+    background: #E80F88;
+}
+#photofilterscrollarea QScrollBar::add-line:horizontal,
+#photofilterscrollarea QScrollBar::sub-line:horizontal {
+    width: 0px;
+}
+#photofilterscrollarea QScrollBar::add-page:horizontal,
+#photofilterscrollarea QScrollBar::sub-page:horizontal {
+    background: none;
+}

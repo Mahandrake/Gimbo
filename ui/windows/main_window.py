@@ -11,6 +11,7 @@ from ui.windows.finished_window import FinishedPage
 from ui.windows.index_window import IndexWindow  # <-- new
 from ui.windows.diary_window import DiaryWindow
 from ui.windows.highlight_window import HighlightWindow
+from ui.windows.album_window import AlbumWindow
 from config.settings import BASE_DIR
 
 
@@ -106,6 +107,11 @@ class MainWindow(QMainWindow):
         self.game_hub_page.highlight_requested.connect(self.go_to_highlight_page)
         self.highlight_page.back_requested.connect(self.go_to_game_hub)
 
+        # build album (photo book) page
+        self.album_page = AlbumWindow()
+        self.game_hub_page.photobook_requested.connect(self.go_to_album_page)
+        self.album_page.back_requested.connect(self.go_to_game_hub)
+
         # register pages
         self.stack.addWidget(self.home_page)  # index 0
         self.stack.addWidget(self.game_hub_page)  # index 1
@@ -115,6 +121,7 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.index_page)  # index 5
         self.stack.addWidget(self.diary_page)  # index 6
         self.stack.addWidget(self.highlight_page)  # index 7
+        self.stack.addWidget(self.album_page)  # index 8
 
         self.stack.setCurrentWidget(self.home_page)
 
@@ -171,6 +178,10 @@ class MainWindow(QMainWindow):
     def go_to_highlight_page(self):
         self.stack.setCurrentWidget(self.highlight_page)
         self.highlight_page.show_with_fade()
+
+    def go_to_album_page(self):
+        self.stack.setCurrentWidget(self.album_page)
+        self.album_page.show_with_fade()
 
     def _go_back_from_diary(self):
         target = getattr(self, "_diary_return_page", self.index_page)

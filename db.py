@@ -207,3 +207,32 @@ def get_highlight_entries() -> list[sqlite3.Row]:
     rows = conn.execute(query).fetchall()
     conn.close()
     return rows
+
+
+def get_all_screenshots(game_id: int | None = None) -> list[sqlite3.Row]:
+    """
+    Every session screenshot across the whole library, newest first.
+    Pass game_id to restrict to one game (used by the filter modal).
+    Joins in the game title in case you want it later (e.g. tooltip/caption).
+    """
+    conn = get_connection()
+    base_query = """
+        SELECT
+            s.id              AS session_id,
+            s.game_id         AS game_id,
+            s.screenshot_path AS screenshot_path,
+            s.created_at      AS created_at,
+            g.title           AS title
+        FROM sessions s
+        JOIN games g ON g.id = s.game_id
+        WHERE s.screenshot_path IS NOT NULL AND s.screenshot_path != ''
+    """
+    if game_id is not None:
+        rows = conn.execute(
+            base_query + " AND s.game_id = ? ORDER BY s.created_at DESC",
+            (game_id,),
+        ).fetchall()
+    else:
+        rows = conn.execute(base_query + " ORDER BY s.created_at DESC").fetchall()
+    conn.close()
+    return rows
