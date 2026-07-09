@@ -71,7 +71,9 @@ class MainWindow(QMainWindow):
         self.journal_page = JournalWindow()
         self.game_hub_page.journal_requested.connect(self.go_to_journal_page)
         self.journal_page.back_requested.connect(self.go_to_game_hub)
-        self.journal_page.view_requested.connect(self.go_to_diary_page)
+        self.journal_page.view_requested.connect(
+            lambda game: self.go_to_diary_page(game, self.journal_page)
+        )
 
         # build writing page
         self.writing_page = WritingPage()
@@ -89,11 +91,14 @@ class MainWindow(QMainWindow):
         self.index_page = IndexWindow()
         self.game_hub_page.index_requested.connect(self.go_to_index_page)
         self.index_page.back_requested.connect(self.go_to_game_hub)
-        self.index_page.game_selected.connect(self.go_to_diary_page)
+        self.index_page.game_selected.connect(
+            lambda game: self.go_to_diary_page(game, self.index_page)
+        )
 
         # build diary page
         self.diary_page = DiaryWindow()
-        self.diary_page.back_requested.connect(self.go_to_index_page)
+        self.diary_page.back_requested.connect(self._go_back_from_diary)  # <-- changed
+        self._diary_return_page = self.index_page
 
         # register pages
         self.stack.addWidget(self.home_page)  # index 0
@@ -149,10 +154,18 @@ class MainWindow(QMainWindow):
         self.stack.setCurrentWidget(self.index_page)
         self.index_page.show_with_fade()
 
-    def go_to_diary_page(self, game: dict):
+    def go_to_diary_page(self, game: dict, return_page: QWidget = None):
+        if return_page is not None:
+            self._diary_return_page = return_page
         self.diary_page.set_game(game)
         self.stack.setCurrentWidget(self.diary_page)
         self.diary_page.show_with_fade()
+
+    def _go_back_from_diary(self):
+        target = getattr(self, "_diary_return_page", self.index_page)
+        self.stack.setCurrentWidget(target)
+        if hasattr(target, "show_with_fade"):
+            target.show_with_fade()
 
     def handle_review_saved(self, review_entry: dict):
         create_review(
