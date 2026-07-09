@@ -352,3 +352,72 @@ QComboBox#addentryfield::down-arrow {
 #diaryscrollarea QScrollBar::sub-page:vertical {
     background: none;
 }
+
+/* ===== Highlight Window ===== */
+#highlightwindow {
+    background-color: #4C0033;
+}
+#highlightpagetitle {
+    font-family: ByteBounce;
+    font-size: 40px;
+    color: #E80F88;
+    padding-left: 10px;
+}
+#highlightscrollarea, #highlightscrollarea > QWidget > QWidget {
+    background-color: transparent;
+    border: none;
+}
+#highlightcard {
+    background-color: #10143A;
+    border: 2px solid #2E4BFF;
+    border-radius: 10px;
+}
+#highlightcover {
+    background-color: #10143A;
+    border: 2px dashed #10143A;
+    border-radius: 8px;
+}
+#highlighttitle {
+    font-family: ByteBounce;
+    font-size: 26px;
+    color: #E4FF30;
+}
+#highlightmeta {
+    font-family: ByteBounce;
+    font-size: 18px;
+    color: #7C9CFF;
+}
+#highlightreview {
+    font-family: ByteBounce;
+    font-size: 22px;
+    color: #d6d6ff;
+}
+#highlightempty {
+    font-family: ByteBounce;
+    font-size: 24px;
+    color: #E80F88;
+}
+
+/* Scrollbar (matches Index + Diary) */
+#highlightscrollarea QScrollBar:vertical {
+    background: #4C0033;
+    width: 14px;
+    margin: 0px;
+    border-radius: 7px;
+}
+#highlightscrollarea QScrollBar::handle:vertical {
+    background: #2E4BFF;
+    min-height: 30px;
+    border-radius: 7px;
+}
+#highlightscrollarea QScrollBar::handle:vertical:hover {
+    background: #5B7BFF;
+}
+#highlightscrollarea QScrollBar::add-line:vertical,
+#highlightscrollarea QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+#highlightscrollarea QScrollBar::add-page:vertical,
+#highlightscrollarea QScrollBar::sub-page:vertical {
+    background: none;
+}

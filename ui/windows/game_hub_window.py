@@ -10,6 +10,7 @@ class GameHubWindow(QWidget):
     back_requested = Signal()
     journal_requested = Signal()
     index_requested = Signal()
+    highlight_requested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -39,14 +40,14 @@ class GameHubWindow(QWidget):
                                           225, 240)
         self.index_btn = AnimatedButton("Index", str(BASE_DIR / "assets" / "gifs" / "index.png"), "animatedbutton", 225,
                                         240)  # <-- was a local var, now self.index_btn
-        highlight_btn = AnimatedButton("Highlight", str(BASE_DIR / "assets" / "gifs" / "highlight.png"),
-                                       "animatedbutton", 225, 240)
+        self.highlight_btn = AnimatedButton("Highlight", str(BASE_DIR / "assets" / "gifs" / "highlight.png"),
+                                            "animatedbutton", 225, 240)
         photobook_btn = AnimatedButton("Photo Book", str(BASE_DIR / "assets" / "gifs" / "photobook.png"),
                                        "animatedbutton", 225, 240)
 
         btn_row.addWidget(self.journal_btn)
         btn_row.addWidget(self.index_btn)
-        btn_row.addWidget(highlight_btn)
+        btn_row.addWidget(self.highlight_btn)
         btn_row.addWidget(photobook_btn)
 
         root_layout.addStretch()
@@ -57,6 +58,7 @@ class GameHubWindow(QWidget):
         self.back_btn.clicked.connect(self.back_requested.emit)
         self.journal_btn.clicked.connect(self.journal_requested.emit)
         self.index_btn.clicked.connect(self.index_requested.emit)
+        self.highlight_btn.clicked.connect(self.highlight_requested.emit)
 
     def show_with_fade(self, duration_ms: int = 400) -> None:
         self._opacity_effect.setOpacity(0.0)

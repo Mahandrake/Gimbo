@@ -167,3 +167,43 @@ def update_game(game_id: int, entry: dict) -> None:
     )
     conn.commit()
     conn.close()
+
+
+def get_highlight_entries() -> list[sqlite3.Row]:
+    """
+    Games that have at least one review, joined with:
+      - their most recent review (rating, body)
+      - aggregated session stats (total playtime, session count)
+    Used by HighlightWindow.
+    """
+    conn = get_connection()
+    query = """
+        SELECT
+            g.id            AS id,
+            g.title         AS title,
+            g.cover_path    AS cover_path,
+            g.platform      AS platform,
+            r.rating        AS rating,
+            r.body          AS body,
+            r.created_at    AS review_created_at,
+            COALESCE(s.total_minutes, 0)  AS total_minutes,
+            COALESCE(s.session_count, 0)  AS session_count
+        FROM games g
+        JOIN reviews r ON r.id = (
+            SELECT id FROM reviews
+            WHERE game_id = g.id
+            ORDER BY created_at DESC
+            LIMIT 1
+        )
+        LEFT JOIN (
+            SELECT game_id,
+                   SUM(duration_minutes) AS total_minutes,
+                   COUNT(*) AS session_count
+            FROM sessions
+            GROUP BY game_id
+        ) s ON s.game_id = g.id
+        ORDER BY r.created_at DESC
+    """
+    rows = conn.execute(query).fetchall()
+    conn.close()
+    return rows

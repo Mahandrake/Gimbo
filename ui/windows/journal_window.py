@@ -68,7 +68,7 @@ class JournalWindow(QWidget):
         self.add_btn = SimpleButton("Add", "animatedbutton", w=60, h=30)
         self.edit_btn = SimpleButton("Edit", "animatedbutton", w=60, h=30)
         self.delete_btn = SimpleButton("Delete", "animatedbutton", w=95, h=30)
-        self.view_btn = SimpleButton("View", "animatedbutton", w=60, h=30)
+        self.view_btn = SimpleButton("View", "startbutton", w=80, h=30)
         for btn in (self.add_btn, self.edit_btn, self.delete_btn, self.view_btn):
             button_row.addWidget(btn)
         left_col.addLayout(button_row)

@@ -1,15 +1,16 @@
 from PySide6.QtWidgets import QWidget, QMainWindow, QHBoxLayout, QVBoxLayout, QStackedWidget
 from PySide6.QtCore import Qt, QPropertyAnimation
 
-from db import create_session , create_review
+from db import create_session, create_review
 from ui.factories import UiFactory
 from ui.widgets.animated_buttons import AnimatedButton
 from ui.windows.game_hub_window import GameHubWindow
 from ui.windows.journal_window import JournalWindow
 from ui.windows.writing_window import WritingPage
 from ui.windows.finished_window import FinishedPage
-from ui.windows.index_window import IndexWindow        # <-- new
+from ui.windows.index_window import IndexWindow  # <-- new
 from ui.windows.diary_window import DiaryWindow
+from ui.windows.highlight_window import HighlightWindow
 from config.settings import BASE_DIR
 
 
@@ -24,7 +25,7 @@ class TitleBar(QWidget):
         layout = QHBoxLayout(self)
         self.titlelabel = UiFactory.make_label("Gimbo", "titlelabel")
         self.closebtn = UiFactory.make_button("X", "closebtn")
-        self.closebtn.setFixedSize(30,30)
+        self.closebtn.setFixedSize(30, 30)
 
         layout.addWidget(self.titlelabel)
         layout.addStretch()
@@ -100,6 +101,11 @@ class MainWindow(QMainWindow):
         self.diary_page.back_requested.connect(self._go_back_from_diary)  # <-- changed
         self._diary_return_page = self.index_page
 
+        # build highlight page
+        self.highlight_page = HighlightWindow()
+        self.game_hub_page.highlight_requested.connect(self.go_to_highlight_page)
+        self.highlight_page.back_requested.connect(self.go_to_game_hub)
+
         # register pages
         self.stack.addWidget(self.home_page)  # index 0
         self.stack.addWidget(self.game_hub_page)  # index 1
@@ -108,6 +114,7 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.finished_page)  # index 4
         self.stack.addWidget(self.index_page)  # index 5
         self.stack.addWidget(self.diary_page)  # index 6
+        self.stack.addWidget(self.highlight_page)  # index 7
 
         self.stack.setCurrentWidget(self.home_page)
 
@@ -115,11 +122,11 @@ class MainWindow(QMainWindow):
         layout = QHBoxLayout()
         layout.setSpacing(10)
 
-        games = AnimatedButton("Games", str(BASE_DIR / "assets" / "gifs" / "mario.gif"), "animatedbutton",225,240)
-        movies = AnimatedButton("Movies", str(BASE_DIR / "assets" / "gifs" / "film.png"), "animatedbutton",225,240)
-        books = AnimatedButton("Books", str(BASE_DIR / "assets" / "gifs" / "book.gif"), "animatedbutton",225,240)
+        games = AnimatedButton("Games", str(BASE_DIR / "assets" / "gifs" / "mario.gif"), "animatedbutton", 225, 240)
+        movies = AnimatedButton("Movies", str(BASE_DIR / "assets" / "gifs" / "film.png"), "animatedbutton", 225, 240)
+        books = AnimatedButton("Books", str(BASE_DIR / "assets" / "gifs" / "book.gif"), "animatedbutton", 225, 240)
 
-        games.clicked.connect(self.go_to_game_hub)   # ← switch page here
+        games.clicked.connect(self.go_to_game_hub)  # ← switch page here
         movies.clicked.connect(lambda: print("movies"))
         books.clicked.connect(lambda: print("books"))
 
@@ -160,6 +167,10 @@ class MainWindow(QMainWindow):
         self.diary_page.set_game(game)
         self.stack.setCurrentWidget(self.diary_page)
         self.diary_page.show_with_fade()
+
+    def go_to_highlight_page(self):
+        self.stack.setCurrentWidget(self.highlight_page)
+        self.highlight_page.show_with_fade()
 
     def _go_back_from_diary(self):
         target = getattr(self, "_diary_return_page", self.index_page)
