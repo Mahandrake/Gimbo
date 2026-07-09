@@ -1,0 +1,354 @@
+#mainwindowbtn {
+background-color: purple;
+color: white;
+}
+#closebtn {
+background-color: crimson;
+font-family: ByteBounce;
+border-radius: 3px;
+}
+
+
+#titlelabel {
+font-family: ByteBounce;
+font-size: 40px;
+color: #E80F88
+}
+
+#mainwindow{
+    background-color: #4C0033;
+}
+
+
+
+
+
+
+#AnimatedButton:hover {
+    border: 2px solid #E80F88;
+    border-radius: 12px;
+    background-color: #6C0053;
+}
+
+
+
+#animatedbutton {
+font-family: ByteBounce;
+font-size: 40px;
+color: #E80F88
+}
+
+
+#startbutton {
+font-family: ByteBounce;
+font-size: 40px;
+color: #E4FF30
+}
+
+#SimpleButton {
+    border-radius: 8px;
+}
+#SimpleButton:hover {
+    background-color: #6C0053;
+}
+#SimpleButton QLabel {
+    background-color: transparent;
+    border: none;
+}
+#journalwindow {
+background-color: #4C0033;
+}
+
+QListView#entryview {
+    background-color: #A91079;
+    border: 2px solid #5B23FF;
+    border-radius:8px ;
+    font-family: ByteBounce;
+    font-size: 45px;
+}
+
+#detailbox {
+    background-color: #A91079;
+    border: 2px solid #E4FF30;
+    border-radius:8px ;
+}
+#detailtitle{
+font-family: ByteBounce;
+font-size: 40px;
+}
+
+#detailmeta{
+font-family: ByteBounce;
+font-size: 30px;
+}
+#detailtext{
+font-family: ByteBounce;
+font-size: 30px;
+}
+
+
+
+
+
+
+/* ===== Writing Page ===== */
+
+#writingpage {
+    background-color: #1e1e1e;
+}
+
+#writingtitle {
+    color: #ffffff;
+    font-size: 40px;
+    font-weight: bold;
+    font-family: "ByteBounce";
+    padding-left: 10px;
+}
+
+#sectionlabel {
+    color: #b0b0b0;
+    font-size: 20px;
+    font-weight: 600;
+    font-family: "ByteBounce";
+    padding-top: 6px;
+    padding-bottom: 2px;
+}
+
+/* --- session notes text box --- */
+#sessiontext {
+    background-color: #420516;
+    color: #e0e0e0;
+    border: 2px solid #E63E6D;
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 30px;
+    font-family: "ByteBounce";
+    selection-background-color: #9C0073;
+}
+
+#sessiontext:focus {
+    border: 2px solid #E63E6D;
+}
+
+/* --- playtime spin boxes --- */
+QSpinBox {
+    background-color: #2a2a2a;
+    color: #ffffff;
+    border: 1px solid #3a3a3a;
+    border-radius: 11px;
+    padding: 4px 8px;
+    font-size: 20px;
+    min-width: 70px;
+    font-family: ByteBounce;
+}
+
+QSpinBox:focus {
+    border: 1px solid #9C0073;
+}
+
+QSpinBox::up-button, QSpinBox::down-button {
+    background-color: #3a3a3a;
+    border: none;
+    width: 16px;
+}
+
+QSpinBox::up-button:hover, QSpinBox::down-button:hover {
+    background-color: #9C0073;
+}
+
+/* --- screenshot preview box --- */
+#screenshotpreview {
+    background-color: #2a2a2a;
+    border: 2px dashed #4a4a4a;
+    border-radius: 8px;
+}
+#ratingspin {
+    background-color: #2a2a2a;
+    color: #ffffff;
+    border: 1px solid #3a3a3a;
+    border-radius: 11px;
+    padding: 4px 8px;
+    font-size: 20px;
+    min-width: 70px;
+    font-family: ByteBounce;
+}
+
+
+
+
+
+#addentrymodal {
+    background-color: rgba(0, 0, 0, 170);
+}
+#addentrycard {
+    background-color: #4C0033;
+    border: 2px solid #5B23FF;
+    border-radius: 12px;
+}
+#addentryheader {
+    font-family: ByteBounce;
+    font-size: 32px;
+    color: #E80F88;
+}
+#addentryfield, QComboBox#addentryfield {
+    background-color: #420516;
+    color: #ffffff;
+    border: 1px solid #E63E6D;
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-family: ByteBounce;
+    font-size: 20px;
+}
+#addentrydescription {
+    background-color: #420516;
+    color: #e0e0e0;
+    border: 2px solid #E63E6D;
+    border-radius: 8px;
+    padding: 8px;
+    font-family: ByteBounce;
+    font-size: 20px;
+}
+#addentrycoverpreview {
+    background-color: #2a2a2a;
+    border: 2px dashed #4a4a4a;
+    border-radius: 8px;
+}
+QComboBox#addentryfield QAbstractItemView {
+    background-color: #420516;
+    color: #ffffff;
+    border: 1px solid #E63E6D;
+    selection-background-color: #9C0073;
+    selection-color: #ffffff;
+    font-family: ByteBounce;
+    font-size: 20px;
+    outline: none;
+}
+QComboBox#addentryfield::drop-down {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 28px;
+    border: 1px solid #E63E6D;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+    background-color: #420516;  /* match (or complement) your field's background */
+}
+
+QComboBox#addentryfield::down-arrow {
+    width: 0px;
+    height: 0px;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid #E63E6D;
+}
+
+
+
+/* ===== Index Window ===== */
+#indexwindow {
+    background-color: #4C0033;
+}
+#indexscrollarea, #indexscrollarea > QWidget > QWidget {
+    background-color: transparent;
+    border: none;
+}
+#diaryscrollarea, #diaryscrollarea > QWidget > QWidget {
+    background-color: transparent;
+    border: none;
+}
+#gamecard {
+    background-color: #A91079;
+    border: 2px solid #5B23FF;
+    border-radius: 10px;
+}
+#gamecard:hover {
+    border: 2px solid #E80F88;
+    background-color: #6C0053;
+}
+#gamecardtitle {
+    font-family: ByteBounce;
+    font-size: 18px;
+    color: #E4FF30;
+}
+#indexempty {
+    font-family: ByteBounce;
+    font-size: 24px;
+    color: #E80F88;
+}
+
+/* ===== Diary Window ===== */
+#diarywindow {
+    background-color: #4C0033;
+}
+#diarytitle {
+    font-family: ByteBounce;
+    font-size: 40px;
+    color: #E80F88;
+    padding-left: 10px;
+}
+#diarycard, #diaryreviewcard {
+    background-color: #420516;
+    border: 2px solid #E63E6D;
+    border-radius: 10px;
+}
+#diarycardheader {
+    font-family: ByteBounce;
+    font-size: 20px;
+    color: #E4FF30;
+}
+#diarycardmeta {
+    font-family: ByteBounce;
+    font-size: 19px;
+    color: #b0b0b0;
+}
+#diarycardtext {
+    font-family: ByteBounce;
+    font-size: 25px;
+    color: #e0e0e0;
+}
+#diarycardscreenshot {
+    background-color: #2a2a2a;
+    border: 2px dashed #4a4a4a;
+    border-radius: 8px;
+}
+#diaryempty {
+    font-family: ByteBounce;
+    font-size: 24px;
+    color: #E80F88;
+}
+
+
+
+/* ===== Scrollbars (Index + Diary) ===== */
+#indexscrollarea QScrollBar:vertical,
+#diaryscrollarea QScrollBar:vertical {
+    background: #4C0033;
+    width: 14px;
+    margin: 0px;
+    border-radius: 7px;
+}
+
+#indexscrollarea QScrollBar::handle:vertical,
+#diaryscrollarea QScrollBar::handle:vertical {
+    background: #9C0073;
+    min-height: 30px;
+    border-radius: 7px;
+}
+
+#indexscrollarea QScrollBar::handle:vertical:hover,
+#diaryscrollarea QScrollBar::handle:vertical:hover {
+    background: #E80F88;
+}
+
+#indexscrollarea QScrollBar::add-line:vertical,
+#indexscrollarea QScrollBar::sub-line:vertical,
+#diaryscrollarea QScrollBar::add-line:vertical,
+#diaryscrollarea QScrollBar::sub-line:vertical {
+    height: 0px;   /* removes the up/down arrow buttons */
+}
+
+#indexscrollarea QScrollBar::add-page:vertical,
+#indexscrollarea QScrollBar::sub-page:vertical,
+#diaryscrollarea QScrollBar::add-page:vertical,
+#diaryscrollarea QScrollBar::sub-page:vertical {
+    background: none;
+}
