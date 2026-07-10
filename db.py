@@ -94,23 +94,42 @@ def delete_game(game_id: int) -> None:
 def create_session(session: dict) -> int:
     """
     session is the dict emitted by WritingPage.session_saved:
-    {game_id, text, playtime_minutes, screenshot_path}.
-    game_id is already inside the dict, so it doesn't need to be passed separately.
+    {game_id, text, playtime_minutes, screenshot_paths}.
+    screenshot_paths is a list now (unlimited) - one row per path goes
+    into session_screenshots instead of a single column on sessions.
     """
     conn = get_connection()
     cur = conn.execute(
-        "INSERT INTO sessions (game_id, duration_minutes, notes, screenshot_path) VALUES (?, ?, ?, ?)",
+        "INSERT INTO sessions (game_id, duration_minutes, notes) VALUES (?, ?, ?)",
         (
             session.get("game_id"),
             session.get("playtime_minutes"),
             session.get("text"),
-            session.get("screenshot_path"),
         ),
     )
-    conn.commit()
     session_id = cur.lastrowid
+
+    for path in session.get("screenshot_paths") or []:
+        if path:
+            conn.execute(
+                "INSERT INTO session_screenshots (session_id, screenshot_path) VALUES (?, ?)",
+                (session_id, path),
+            )
+
+    conn.commit()
     conn.close()
     return session_id
+
+
+def get_screenshots_for_session(session_id: int) -> list[sqlite3.Row]:
+    """Used by DiaryWindow to render every screenshot for a session card."""
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM session_screenshots WHERE session_id = ? ORDER BY created_at ASC",
+        (session_id,),
+    ).fetchall()
+    conn.close()
+    return rows
 
 
 def get_sessions_for_game(game_id: int) -> list[sqlite3.Row]:
@@ -213,26 +232,26 @@ def get_all_screenshots(game_id: int | None = None) -> list[sqlite3.Row]:
     """
     Every session screenshot across the whole library, newest first.
     Pass game_id to restrict to one game (used by the filter modal).
-    Joins in the game title in case you want it later (e.g. tooltip/caption).
     """
     conn = get_connection()
     base_query = """
         SELECT
-            s.id              AS session_id,
-            s.game_id         AS game_id,
-            s.screenshot_path AS screenshot_path,
-            s.created_at      AS created_at,
-            g.title           AS title
-        FROM sessions s
+            ss.id              AS screenshot_id,
+            ss.session_id      AS session_id,
+            ss.screenshot_path AS screenshot_path,
+            ss.created_at      AS created_at,
+            s.game_id          AS game_id,
+            g.title            AS title
+        FROM session_screenshots ss
+        JOIN sessions s ON s.id = ss.session_id
         JOIN games g ON g.id = s.game_id
-        WHERE s.screenshot_path IS NOT NULL AND s.screenshot_path != ''
     """
     if game_id is not None:
         rows = conn.execute(
-            base_query + " AND s.game_id = ? ORDER BY s.created_at DESC",
+            base_query + " WHERE s.game_id = ? ORDER BY ss.created_at DESC",
             (game_id,),
         ).fetchall()
     else:
-        rows = conn.execute(base_query + " ORDER BY s.created_at DESC").fetchall()
+        rows = conn.execute(base_query + " ORDER BY ss.created_at DESC").fetchall()
     conn.close()
     return rows

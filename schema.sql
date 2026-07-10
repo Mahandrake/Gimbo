@@ -20,6 +20,14 @@ CREATE TABLE IF NOT EXISTS sessions (
     FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS session_screenshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL,
+    screenshot_path TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS reviews (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     game_id INTEGER NOT NULL,
@@ -32,3 +40,4 @@ CREATE TABLE IF NOT EXISTS reviews (
 -- Helpful indexes for the lazy-per-page queries (looking up sessions/reviews by game)
 CREATE INDEX IF NOT EXISTS idx_sessions_game_id ON sessions(game_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_game_id ON reviews(game_id);
+CREATE INDEX IF NOT EXISTS idx_session_screenshots_session_id ON session_screenshots(session_id);

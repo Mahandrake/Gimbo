@@ -1,12 +1,13 @@
 from PySide6.QtCore import Qt, Signal, QPropertyAnimation, QTimer
-from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
     QScrollArea, QGraphicsOpacityEffect, QApplication
 )
 
 from ui.widgets.animated_buttons import SimpleButton
-from db import get_sessions_for_game, get_reviews_for_game
+from ui.widgets.photo_thumbnail import PhotoThumbnail
+from ui.windows.photo_viewer_modal import PhotoViewerModal
+from db import get_sessions_for_game, get_reviews_for_game, get_screenshots_for_session
 
 
 class DiaryWindow(QWidget):
@@ -22,6 +23,10 @@ class DiaryWindow(QWidget):
         self._opacity_effect = QGraphicsOpacityEffect(self)
         self.setGraphicsEffect(self._opacity_effect)
         self._opacity_effect.setOpacity(1.0)
+
+        # same convention as AlbumWindow: parented to self, reparented to
+        # the top-level window when a screenshot is actually opened
+        self.viewer_modal = PhotoViewerModal(self)
 
     def _build_ui(self):
         root_layout = QVBoxLayout(self)
@@ -98,43 +103,75 @@ class DiaryWindow(QWidget):
         card = QFrame()
         card.setObjectName("diarycard")
         card.setAttribute(Qt.WA_StyledBackground, True)
-        # card.setMinimumHeight(400)
-        layout = QHBoxLayout(card)
-        layout.setContentsMargins(24, 24, 24, 24)  # was 16,16,16,16
-        layout.setSpacing(24)  # was 16
+        outer_layout = QVBoxLayout(card)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
 
-        text_col = QVBoxLayout()
+        # gather screenshots: new multi-screenshot table first, fall back
+        # to the legacy single screenshot_path column for old sessions
+        screenshots = get_screenshots_for_session(row["id"])
+        paths = [s["screenshot_path"] for s in screenshots]
+        if not paths and row["screenshot_path"]:
+            paths = [row["screenshot_path"]]
+
+        # --- upper section: context (same look as before) ---
+        upper = QWidget()
+        upper.setObjectName("diarycardupper" if paths else "diarycardupperfull")
+        upper.setAttribute(Qt.WA_StyledBackground, True)
+        upper_layout = QVBoxLayout(upper)
+        upper_layout.setContentsMargins(24, 24, 24, 24)
+        upper_layout.setSpacing(6)
+
         header = QLabel(f"Session · {row['created_at']}")
         header.setObjectName("diarycardheader")
-        text_col.addWidget(header)
+        upper_layout.addWidget(header)
 
         minutes = row["duration_minutes"] or 0
         hours, mins = divmod(minutes, 60)
         playtime_label = QLabel(f"Played {hours}h {mins}m")
         playtime_label.setObjectName("diarycardmeta")
-        text_col.addWidget(playtime_label)
+        upper_layout.addWidget(playtime_label)
 
         notes_label = QLabel(row["notes"] or "")
         notes_label.setObjectName("diarycardtext")
         notes_label.setWordWrap(True)
-        text_col.addWidget(notes_label)
-        text_col.addStretch()
+        upper_layout.addWidget(notes_label)
 
-        layout.addLayout(text_col, stretch=1)
+        outer_layout.addWidget(upper)
 
-        screenshot_path = row["screenshot_path"]
-        if screenshot_path:
-            screenshot_label = QLabel()
-            screenshot_label.setObjectName("diarycardscreenshot")
-            screenshot_label.setFixedSize(220, 140)
-            screenshot_label.setAlignment(Qt.AlignCenter)
-            pixmap = QPixmap(screenshot_path)
-            if not pixmap.isNull():
-                scaled = pixmap.scaled(220, 140, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-                screenshot_label.setPixmap(scaled)
-            else:
-                screenshot_label.setText("Image not found")
-            layout.addWidget(screenshot_label)
+        # --- lower section: screenshots, dark blueish, horizontal scroll ---
+        if paths:
+            lower = QFrame()
+            lower.setObjectName("diarycardlower")
+            lower.setAttribute(Qt.WA_StyledBackground, True)
+            lower_layout = QVBoxLayout(lower)
+            lower_layout.setContentsMargins(16, 16, 16, 16)
+
+            shots_scroll = QScrollArea()
+            shots_scroll.setObjectName("diarycardshotsscroll")
+            shots_scroll.setAttribute(Qt.WA_StyledBackground, True)
+            shots_scroll.viewport().setAttribute(Qt.WA_StyledBackground, True)
+            shots_scroll.setWidgetResizable(True)
+            shots_scroll.setFrameShape(QScrollArea.NoFrame)
+            shots_scroll.setFixedHeight(200)
+            shots_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            shots_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+            shots_container = QWidget()
+            shots_container.setAttribute(Qt.WA_StyledBackground, True)
+            shots_row_layout = QHBoxLayout(shots_container)
+            shots_row_layout.setSpacing(12)
+            shots_row_layout.setAlignment(Qt.AlignLeft)
+
+            for path in paths:
+                thumb = PhotoThumbnail(path)
+                thumb.clicked.connect(self.viewer_modal.open_photo)
+                shots_row_layout.addWidget(thumb)
+
+            shots_scroll.setWidget(shots_container)
+            lower_layout.addWidget(shots_scroll)
+
+            outer_layout.addWidget(lower)
 
         return card
 

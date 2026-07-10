@@ -162,6 +162,25 @@ QSpinBox::up-button:hover, QSpinBox::down-button:hover {
     border: 2px dashed #4a4a4a;
     border-radius: 8px;
 }
+#sessionscreenshotthumb {
+    background-color: #2a2a2a;
+    border: 2px solid #4a4a4a;
+    border-radius: 8px;
+}
+#sessionscreenshotremove {
+    background-color: #9C0073;
+    color: #ffffff;
+    border-radius: 10px;
+    font-family: ByteBounce;
+    font-size: 14px;
+}
+#sessionscreenshotremove:hover {
+    background-color: #E80F88;
+}
+#screenshotsscrollarea, #screenshotsscrollarea > QWidget > QWidget {
+    background-color: transparent;
+    border: none;
+}
 #ratingspin {
     background-color: #2a2a2a;
     color: #ffffff;
@@ -285,10 +304,62 @@ QComboBox#addentryfield::down-arrow {
     color: #E80F88;
     padding-left: 10px;
 }
-#diarycard, #diaryreviewcard {
+#diarycard {
+    background-color: transparent;
+    border: 2px solid #E63E6D;
+    border-radius: 10px;
+}
+#diaryreviewcard {
     background-color: #420516;
     border: 2px solid #E63E6D;
     border-radius: 10px;
+}
+
+/* upper (context) section of a session card */
+#diarycardupper {
+    background-color: #420516;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+/* used when a session has no screenshots, so all corners stay rounded */
+#diarycardupperfull {
+    background-color: #420516;
+    border-radius: 8px;
+}
+
+/* lower (screenshots) section - dark blueish, per your spec */
+#diarycardlower {
+    background-color: #101A3A;
+    border: 2px solid #2E4BFF;
+/*    border-bottom-left-radius: 10px;*/
+/*    border-bottom-right-radius: 10px;*/
+    border-radius: 10px;
+}
+#diarycardshotsscroll, #diarycardshotsscroll > QWidget > QWidget {
+    background-color: transparent;
+    border: none;
+}
+#diarycardshotsscroll QScrollBar:horizontal {
+    background: #101A3A;
+    height: 12px;
+    margin: 0px;
+    border-radius: 6px;
+}
+#diarycardshotsscroll QScrollBar::handle:horizontal {
+    background: #2E4BFF;
+    min-width: 30px;
+    border-radius: 6px;
+}
+#diarycardshotsscroll QScrollBar::handle:horizontal:hover {
+    background: #5B7BFF;
+}
+#diarycardshotsscroll QScrollBar::add-line:horizontal,
+#diarycardshotsscroll QScrollBar::sub-line:horizontal {
+    width: 0px;
+}
+#diarycardshotsscroll QScrollBar::add-page:horizontal,
+#diarycardshotsscroll QScrollBar::sub-page:horizontal {
+    background: none;
 }
 #diarycardheader {
     font-family: ByteBounce;

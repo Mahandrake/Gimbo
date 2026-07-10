@@ -2,9 +2,61 @@ from PySide6.QtCore import Signal, Qt, QPropertyAnimation, QTimer
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit,
-    QSpinBox, QFileDialog, QGraphicsOpacityEffect
+    QSpinBox, QFileDialog, QGraphicsOpacityEffect, QScrollArea, QFrame
 )
 from ui.widgets.animated_buttons import SimpleButton
+
+
+class _ClickableLabel(QLabel):
+    clicked = Signal()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(event)
+
+
+class _ScreenshotThumb(QFrame):
+    """One removable thumbnail in the session's screenshot strip."""
+
+    remove_requested = Signal(str)
+
+    THUMB_W = 150
+    THUMB_H = 90
+
+    def __init__(self, path: str, parent=None):
+        super().__init__(parent)
+        self._path = path
+        self.setObjectName("sessionscreenshotthumb")
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setFixedSize(self.THUMB_W, self.THUMB_H + 26)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(2)
+
+        top_row = QHBoxLayout()
+        top_row.addStretch()
+        self.remove_btn = _ClickableLabel("✕")
+        self.remove_btn.setObjectName("sessionscreenshotremove")
+        self.remove_btn.setCursor(Qt.PointingHandCursor)
+        self.remove_btn.setFixedSize(20, 20)
+        self.remove_btn.setAlignment(Qt.AlignCenter)
+        self.remove_btn.clicked.connect(lambda: self.remove_requested.emit(self._path))
+        top_row.addWidget(self.remove_btn)
+        layout.addLayout(top_row)
+
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignCenter)
+        pixmap = QPixmap(path)
+        if not pixmap.isNull():
+            scaled = pixmap.scaled(
+                self.THUMB_W - 8, self.THUMB_H, Qt.KeepAspectRatio, Qt.SmoothTransformation
+            )
+            self.image_label.setPixmap(scaled)
+        else:
+            self.image_label.setText("Image not found")
+        layout.addWidget(self.image_label)
 
 
 class WritingPage(QWidget):
@@ -14,8 +66,8 @@ class WritingPage(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("writingpage")
-        self._current_game = None       # holds the selected game's dict
-        self._screenshot_path = None    # optional, set via file picker
+        self._current_game = None
+        self._screenshot_paths: list[str] = []   # <-- now a list, unlimited
 
         self._build_ui()
         self._connect_signals()
@@ -70,23 +122,35 @@ class WritingPage(QWidget):
         playtime_row.addStretch()
         root_layout.addLayout(playtime_row)
 
-        # --- screenshot row (optional) ---
-        screenshot_row = QHBoxLayout()
-        self.add_screenshot_btn = SimpleButton("Add Screenshot", "animatedbutton", w=250, h=32)
-        self.remove_screenshot_btn = SimpleButton("Remove", "animatedbutton", w=100, h=32)
-        self.remove_screenshot_btn.setVisible(False)
+        # --- screenshots (unlimited) ---
+        screenshots_label = QLabel("Screenshots (optional)")
+        screenshots_label.setObjectName("sectionlabel")
+        root_layout.addWidget(screenshots_label)
 
-        self.screenshot_preview = QLabel()
-        self.screenshot_preview.setObjectName("screenshotpreview")
-        self.screenshot_preview.setFixedSize(160, 90)
-        self.screenshot_preview.setAlignment(Qt.AlignCenter)
-        self.screenshot_preview.setVisible(False)
+        screenshot_btn_row = QHBoxLayout()
+        self.add_screenshot_btn = SimpleButton("Add Screenshot(s)", "animatedbutton", w=250, h=32)
+        screenshot_btn_row.addWidget(self.add_screenshot_btn)
+        screenshot_btn_row.addStretch()
+        root_layout.addLayout(screenshot_btn_row)
 
-        screenshot_row.addWidget(self.add_screenshot_btn)
-        screenshot_row.addWidget(self.remove_screenshot_btn)
-        screenshot_row.addWidget(self.screenshot_preview)
-        screenshot_row.addStretch()
-        root_layout.addLayout(screenshot_row)
+        self.screenshots_scroll = QScrollArea()
+        self.screenshots_scroll.setObjectName("screenshotsscrollarea")
+        self.screenshots_scroll.setAttribute(Qt.WA_StyledBackground, True)
+        self.screenshots_scroll.viewport().setAttribute(Qt.WA_StyledBackground, True)
+        self.screenshots_scroll.setWidgetResizable(True)
+        self.screenshots_scroll.setFrameShape(QScrollArea.NoFrame)
+        self.screenshots_scroll.setFixedHeight(140)
+        self.screenshots_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.screenshots_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        self.screenshots_container = QWidget()
+        self.screenshots_container.setAttribute(Qt.WA_StyledBackground, True)
+        self.screenshots_row_layout = QHBoxLayout(self.screenshots_container)
+        self.screenshots_row_layout.setSpacing(10)
+        self.screenshots_row_layout.setAlignment(Qt.AlignLeft)
+
+        self.screenshots_scroll.setWidget(self.screenshots_container)
+        root_layout.addWidget(self.screenshots_scroll)
 
         root_layout.addStretch()
 
@@ -99,8 +163,7 @@ class WritingPage(QWidget):
 
     def _connect_signals(self):
         self.back_btn.clicked.connect(self.back_requested.emit)
-        self.add_screenshot_btn.clicked.connect(self._pick_screenshot)
-        self.remove_screenshot_btn.clicked.connect(self._clear_screenshot)
+        self.add_screenshot_btn.clicked.connect(self._pick_screenshots)
         self.save_btn.clicked.connect(self._save_session)
 
     def set_game(self, game: dict) -> None:
@@ -111,31 +174,33 @@ class WritingPage(QWidget):
         self.session_text.clear()
         self.hours_spin.setValue(0)
         self.minutes_spin.setValue(0)
-        self._clear_screenshot()
+        self._screenshot_paths = []
+        self._rebuild_screenshot_thumbnails()
 
-    def _pick_screenshot(self):
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Select Screenshot", "", "Images (*.png *.jpg *.jpeg *.webp)"
+    def _pick_screenshots(self):
+        paths, _ = QFileDialog.getOpenFileNames(
+            self, "Select Screenshot(s)", "", "Images (*.png *.jpg *.jpeg *.webp)"
         )
-        if path:
-            self._screenshot_path = path
-            pixmap = QPixmap(path)
-            if not pixmap.isNull():
-                scaled = pixmap.scaled(
-                    self.screenshot_preview.width(),
-                    self.screenshot_preview.height(),
-                    Qt.KeepAspectRatio,
-                    Qt.SmoothTransformation
-                )
-                self.screenshot_preview.setPixmap(scaled)
-                self.screenshot_preview.setVisible(True)
-                self.remove_screenshot_btn.setVisible(True)
+        if paths:
+            self._screenshot_paths.extend(paths)
+            self._rebuild_screenshot_thumbnails()
 
-    def _clear_screenshot(self):
-        self._screenshot_path = None
-        self.screenshot_preview.clear()
-        self.screenshot_preview.setVisible(False)
-        self.remove_screenshot_btn.setVisible(False)
+    def _remove_screenshot(self, path: str):
+        if path in self._screenshot_paths:
+            self._screenshot_paths.remove(path)
+        self._rebuild_screenshot_thumbnails()
+
+    def _rebuild_screenshot_thumbnails(self) -> None:
+        while self.screenshots_row_layout.count():
+            item = self.screenshots_row_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+
+        for path in self._screenshot_paths:
+            thumb = _ScreenshotThumb(path)
+            thumb.remove_requested.connect(self._remove_screenshot)
+            self.screenshots_row_layout.addWidget(thumb)
 
     def _save_session(self):
         if self._current_game is None:
@@ -145,7 +210,7 @@ class WritingPage(QWidget):
             "game_id": self._current_game.get("id"),
             "text": self.session_text.toPlainText().strip(),
             "playtime_minutes": self.hours_spin.value() * 60 + self.minutes_spin.value(),
-            "screenshot_path": self._screenshot_path,
+            "screenshot_paths": list(self._screenshot_paths),
         }
         self.session_saved.emit(session_entry)
 
