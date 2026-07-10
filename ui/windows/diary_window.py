@@ -218,14 +218,13 @@ class DiaryWindow(QWidget):
         lower_layout.addWidget(shots_scroll)
         outer_layout.addWidget(lower)
 
-        add_shot_btn = SimpleButton("Add Screenshot(s)", "animatedbutton", w=180, h=90)
-
-        def clear_shots_row():
-            while shots_row_layout.count():
-                item = shots_row_layout.takeAt(0)
-                w = item.widget()
-                if w is not None:
-                    w.deleteLater()
+        # Created ONCE per card, parented to shots_container immediately.
+        # NEVER destroyed via deleteLater - only ever added/removed from the
+        # layout with addWidget/removeWidget, which just detaches it without
+        # destroying the underlying widget. This is what was breaking before:
+        # the old code deleted this same button on every rebuild.
+        add_shot_btn = SimpleButton("Add Screenshot(s)", "animatedbutton", w=260, h=150, parent=shots_container)
+        add_shot_btn.hide()
 
         def on_delete_screenshot_clicked(screenshot_id: int):
             def _confirm():
@@ -238,9 +237,25 @@ class DiaryWindow(QWidget):
                 on_confirm=_confirm,
             )
 
+        def clear_thumbnails_only():
+            """Removes and destroys only the thumbnail widgets, leaving
+            add_shot_btn's own widget instance completely untouched."""
+            for i in reversed(range(shots_row_layout.count())):
+                item = shots_row_layout.itemAt(i)
+                w = item.widget()
+                if w is None or w is add_shot_btn:
+                    continue
+                shots_row_layout.takeAt(i)
+                w.deleteLater()
+
         def rebuild_shots_row(editing: bool):
-            clear_shots_row()
+            clear_thumbnails_only()
             current_screenshots = get_screenshots_for_session(row["id"])
+
+            btn_idx = shots_row_layout.indexOf(add_shot_btn)
+            if btn_idx != -1:
+                shots_row_layout.removeWidget(add_shot_btn)
+
             for s in current_screenshots:
                 thumb = PhotoThumbnail(
                     s["screenshot_path"],
@@ -254,8 +269,16 @@ class DiaryWindow(QWidget):
 
             if editing:
                 shots_row_layout.addWidget(add_shot_btn)
+                add_shot_btn.show()
+            else:
+                add_shot_btn.hide()
 
             lower.setVisible(bool(current_screenshots) or editing)
+            # Forces the newly (re)inserted widgets to actually paint now,
+            # instead of staying invisible until something else forces a
+            # repaint (e.g. a stray hover) - same fix used elsewhere for
+            # dynamically-added widgets.
+            QApplication.processEvents()
 
         def on_add_screenshot_clicked():
             paths, _ = QFileDialog.getOpenFileNames(
