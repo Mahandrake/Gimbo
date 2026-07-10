@@ -70,7 +70,7 @@ class ConfirmModal(QWidget):
         self.confirmed.emit()
 
     def open_modal(self, title: str = "Are you sure?", message: str = "",
-                    confirm_text: str = "Delete", on_confirm=None) -> None:
+                   confirm_text: str = "Delete", on_confirm=None) -> None:
         self.title_label.setText(title)
         self.message_label.setText(message)
         self.confirm_btn.label.setText(confirm_text)

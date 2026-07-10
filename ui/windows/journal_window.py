@@ -264,7 +264,7 @@ class JournalWindow(QWidget):
                 self.detail_image.setPixmap(scaled)
         else:
             self.detail_image.clear()
-            image_path = str(BASE_DIR/"assets"/'gifs'/"index.png")
+            image_path = str(BASE_DIR / "assets" / 'gifs' / "index.png")
             pixmap = QPixmap(image_path)
             scaled = pixmap.scaled(
                 self.detail_image.width() or 400,

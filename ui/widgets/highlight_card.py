@@ -14,8 +14,8 @@ class HighlightCard(QFrame):
     the right. Supports inline editing of the review and delete, same pattern
     as the review cards in DiaryWindow."""
 
-    review_updated = Signal(int, dict)   # review_id, {rating, body}
-    delete_requested = Signal(int)       # review_id
+    review_updated = Signal(int, dict)  # review_id, {rating, body}
+    delete_requested = Signal(int)  # review_id
 
     COVER_W = 180
     COVER_H = 220
@@ -58,7 +58,7 @@ class HighlightCard(QFrame):
         header_row.addWidget(title_label)
         header_row.addStretch()
         self.edit_btn = SimpleButton("Edit", "animatedbutton", w=80, h=26)
-        self.delete_btn = SimpleButton("Delete", "animatedbutton", w=90, h=26)
+        self.delete_btn = SimpleButton("Delete", "animatedbutton", w=110, h=26)
         header_row.addWidget(self.edit_btn)
         header_row.addWidget(self.delete_btn)
         details_col.addLayout(header_row)
@@ -95,7 +95,7 @@ class HighlightCard(QFrame):
         edit_action_row = QHBoxLayout()
         edit_action_row.addStretch()
         self.save_btn = SimpleButton("Save", "startbutton", w=90, h=28)
-        self.cancel_btn = SimpleButton("Cancel", "animatedbutton", w=90, h=28)
+        self.cancel_btn = SimpleButton("Cancel", "animatedbutton", w=110, h=28)
         edit_action_row.addWidget(self.cancel_btn)
         edit_action_row.addWidget(self.save_btn)
 

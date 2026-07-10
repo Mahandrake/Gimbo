@@ -55,7 +55,7 @@ def create_game(entry: dict) -> int:
         (
             entry["title"],
             entry.get("platform"),
-            entry.get("image_path"),   # <-- changed from entry.get("cover_path")
+            entry.get("image_path"),  # <-- changed from entry.get("cover_path")
             entry.get("description"),
         ),
     )
@@ -167,7 +167,6 @@ def get_reviews_for_game(game_id: int) -> list[sqlite3.Row]:
     return rows
 
 
-
 def update_game(game_id: int, entry: dict) -> None:
     """
     entry uses the same shape as create_game: {title, platform, description, image_path}.
@@ -191,33 +190,31 @@ def update_game(game_id: int, entry: dict) -> None:
 def get_highlight_entries() -> list[sqlite3.Row]:
     conn = get_connection()
     query = """
-        SELECT
-            g.id            AS id,
-            g.title         AS title,
-            g.cover_path    AS cover_path,
-            g.platform      AS platform,
-            r.id            AS review_id,
-            r.rating        AS rating,
-            r.body          AS body,
-            r.created_at    AS review_created_at,
-            COALESCE(s.total_minutes, 0)  AS total_minutes,
-            COALESCE(s.session_count, 0)  AS session_count
-        FROM games g
-        JOIN reviews r ON r.id = (
-            SELECT id FROM reviews
-            WHERE game_id = g.id
-            ORDER BY created_at DESC
-            LIMIT 1
-        )
-        LEFT JOIN (
-            SELECT game_id,
-                   SUM(duration_minutes) AS total_minutes,
-                   COUNT(*) AS session_count
+            SELECT g.id                         AS id,
+                   g.title                      AS title,
+                   g.cover_path                 AS cover_path,
+                   g.platform                   AS platform,
+                   r.id                         AS review_id,
+                   r.rating                     AS rating,
+                   r.body                       AS body,
+                   r.created_at                 AS review_created_at,
+                   COALESCE(s.total_minutes, 0) AS total_minutes,
+                   COALESCE(s.session_count, 0) AS session_count
+            FROM games g
+                     JOIN reviews r ON r.id = (SELECT id
+                                               FROM reviews
+                                               WHERE game_id = g.id
+                                               ORDER BY created_at DESC
+                LIMIT 1
+                )
+                LEFT JOIN (
+            SELECT game_id, SUM (duration_minutes) AS total_minutes, COUNT (*) AS session_count
             FROM sessions
             GROUP BY game_id
-        ) s ON s.game_id = g.id
-        ORDER BY r.created_at DESC
-    """
+                ) s
+            ON s.game_id = g.id
+            ORDER BY r.created_at DESC \
+            """
     rows = conn.execute(query).fetchall()
     conn.close()
     return rows
@@ -230,17 +227,16 @@ def get_all_screenshots(game_id: int | None = None) -> list[sqlite3.Row]:
     """
     conn = get_connection()
     base_query = """
-        SELECT
-            ss.id              AS screenshot_id,
-            ss.session_id      AS session_id,
-            ss.screenshot_path AS screenshot_path,
-            ss.created_at      AS created_at,
-            s.game_id          AS game_id,
-            g.title            AS title
-        FROM session_screenshots ss
-        JOIN sessions s ON s.id = ss.session_id
-        JOIN games g ON g.id = s.game_id
-    """
+                 SELECT ss.id              AS screenshot_id,
+                        ss.session_id      AS session_id,
+                        ss.screenshot_path AS screenshot_path,
+                        ss.created_at      AS created_at,
+                        s.game_id          AS game_id,
+                        g.title            AS title
+                 FROM session_screenshots ss
+                          JOIN sessions s ON s.id = ss.session_id
+                          JOIN games g ON g.id = s.game_id \
+                 """
     if game_id is not None:
         rows = conn.execute(
             base_query + " WHERE s.game_id = ? ORDER BY ss.created_at DESC",
@@ -295,6 +291,7 @@ def delete_screenshot(screenshot_id: int) -> None:
     conn.execute("DELETE FROM session_screenshots WHERE id = ?", (screenshot_id,))
     conn.commit()
     conn.close()
+
 
 def add_screenshot_to_session(session_id: int, path: str) -> int:
     """Adds one screenshot to an existing session - used when editing a

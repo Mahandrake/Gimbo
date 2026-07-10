@@ -132,7 +132,7 @@ class DiaryWindow(QWidget):
         header_row.addWidget(header)
         header_row.addStretch()
         edit_btn = SimpleButton("Edit", "animatedbutton", w=80, h=26)
-        delete_btn = SimpleButton("Delete", "animatedbutton", w=90, h=26)
+        delete_btn = SimpleButton("Delete", "animatedbutton", w=110, h=26)
         header_row.addWidget(edit_btn)
         header_row.addWidget(delete_btn)
         upper_layout.addLayout(header_row)
@@ -171,7 +171,7 @@ class DiaryWindow(QWidget):
         edit_action_row = QHBoxLayout()
         edit_action_row.addStretch()
         save_btn = SimpleButton("Save", "startbutton", w=90, h=28)
-        cancel_btn = SimpleButton("Cancel", "animatedbutton", w=90, h=28)
+        cancel_btn = SimpleButton("Cancel", "animatedbutton", w=110, h=28)
         edit_action_row.addWidget(cancel_btn)
         edit_action_row.addWidget(save_btn)
 
@@ -223,13 +223,14 @@ class DiaryWindow(QWidget):
         # layout with addWidget/removeWidget, which just detaches it without
         # destroying the underlying widget. This is what was breaking before:
         # the old code deleted this same button on every rebuild.
-        add_shot_btn = SimpleButton("Add Screenshot(s)", "animatedbutton", w=260, h=150, parent=shots_container)
+        add_shot_btn = SimpleButton("Add Screenshot(s)", "animatedbutton", w=280, h=150, parent=shots_container)
         add_shot_btn.hide()
 
         def on_delete_screenshot_clicked(screenshot_id: int):
             def _confirm():
                 delete_screenshot(screenshot_id)
                 rebuild_shots_row(True)
+
             self.confirm_modal.open_modal(
                 title="Delete Screenshot",
                 message="Are you sure you want to delete this screenshot? This cannot be undone.",
@@ -354,7 +355,8 @@ class DiaryWindow(QWidget):
 
         header_row = QHBoxLayout()
         rating = row["rating"]
-        header = QLabel(f"Review · {row['created_at']} · {rating}/10" if rating is not None else f"Review · {row['created_at']}")
+        header = QLabel(
+            f"Review · {row['created_at']} · {rating}/10" if rating is not None else f"Review · {row['created_at']}")
         header.setObjectName("diarycardheader")
         header_row.addWidget(header)
         header_row.addStretch()

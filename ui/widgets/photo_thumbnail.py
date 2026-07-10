@@ -17,8 +17,8 @@ class PhotoThumbnail(QFrame):
     session cards). Clicking the image opens PhotoViewerModal. If deletable=True
     and a screenshot_id is given, a small remove button is shown too."""
 
-    clicked = Signal(str)              # emits the screenshot's file path
-    delete_requested = Signal(int)     # emits the screenshot's db id
+    clicked = Signal(str)  # emits the screenshot's file path
+    delete_requested = Signal(int)  # emits the screenshot's db id
 
     THUMB_W = 220
     THUMB_H = 140
