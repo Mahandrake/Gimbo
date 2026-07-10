@@ -131,8 +131,8 @@ class DiaryWindow(QWidget):
         header.setObjectName("diarycardheader")
         header_row.addWidget(header)
         header_row.addStretch()
-        edit_btn = SimpleButton("Edit", "animatedbutton", w=80, h=26)
-        delete_btn = SimpleButton("Delete", "animatedbutton", w=110, h=26)
+        edit_btn = SimpleButton("Edit", "animatedbutton", w=80, h=30)
+        delete_btn = SimpleButton("Delete", "animatedbutton", w=110, h=30)
         header_row.addWidget(edit_btn)
         header_row.addWidget(delete_btn)
         upper_layout.addLayout(header_row)
@@ -274,11 +274,23 @@ class DiaryWindow(QWidget):
             else:
                 add_shot_btn.hide()
 
-            lower.setVisible(bool(current_screenshots) or editing)
-            # Forces the newly (re)inserted widgets to actually paint now,
-            # instead of staying invisible until something else forces a
-            # repaint (e.g. a stray hover) - same fix used elsewhere for
-            # dynamically-added widgets.
+                # Let the newly (re)inserted thumbnails/button activate their layout
+                # BEFORE toggling lower's visibility - same fix used for dynamically
+                # added widgets elsewhere (see IndexWindow.show_with_fade): calling
+                # processEvents() only AFTER show()/hide() is too late - the widget
+                # paints before layout activation and stays invisible until a stray
+                # repaint (e.g. hover) forces it to redraw.
+            QApplication.processEvents()
+
+            should_show_lower = bool(current_screenshots) or editing
+            if should_show_lower:
+                lower.show()
+            else:
+                lower.hide()
+
+            outer_layout.invalidate()
+            outer_layout.activate()
+            card.updateGeometry()
             QApplication.processEvents()
 
         def on_add_screenshot_clicked():
@@ -361,7 +373,7 @@ class DiaryWindow(QWidget):
         header_row.addWidget(header)
         header_row.addStretch()
         edit_btn = SimpleButton("Edit", "animatedbutton", w=80, h=26)
-        delete_btn = SimpleButton("Delete", "animatedbutton", w=90, h=26)
+        delete_btn = SimpleButton("Delete", "animatedbutton", w=110, h=26)
         header_row.addWidget(edit_btn)
         header_row.addWidget(delete_btn)
         layout.addLayout(header_row)
@@ -390,7 +402,7 @@ class DiaryWindow(QWidget):
         edit_action_row = QHBoxLayout()
         edit_action_row.addStretch()
         save_btn = SimpleButton("Save", "startbutton", w=90, h=28)
-        cancel_btn = SimpleButton("Cancel", "animatedbutton", w=90, h=28)
+        cancel_btn = SimpleButton("Cancel", "animatedbutton", w=110, h=28)
         edit_action_row.addWidget(cancel_btn)
         edit_action_row.addWidget(save_btn)
 
