@@ -111,8 +111,6 @@ class DiaryWindow(QWidget):
         # to the legacy single screenshot_path column for old sessions
         screenshots = get_screenshots_for_session(row["id"])
         paths = [s["screenshot_path"] for s in screenshots]
-        if not paths and row["screenshot_path"]:
-            paths = [row["screenshot_path"]]
 
         # --- upper section: context (same look as before) ---
         upper = QWidget()

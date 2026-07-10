@@ -15,7 +15,6 @@ CREATE TABLE IF NOT EXISTS sessions (
     game_id INTEGER NOT NULL,
     duration_minutes INTEGER,
     notes TEXT,
-    screenshot_path TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
 );
