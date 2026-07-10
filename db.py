@@ -189,12 +189,6 @@ def update_game(game_id: int, entry: dict) -> None:
 
 
 def get_highlight_entries() -> list[sqlite3.Row]:
-    """
-    Games that have at least one review, joined with:
-      - their most recent review (rating, body)
-      - aggregated session stats (total playtime, session count)
-    Used by HighlightWindow.
-    """
     conn = get_connection()
     query = """
         SELECT
@@ -202,6 +196,7 @@ def get_highlight_entries() -> list[sqlite3.Row]:
             g.title         AS title,
             g.cover_path    AS cover_path,
             g.platform      AS platform,
+            r.id            AS review_id,
             r.rating        AS rating,
             r.body          AS body,
             r.created_at    AS review_created_at,
@@ -255,3 +250,61 @@ def get_all_screenshots(game_id: int | None = None) -> list[sqlite3.Row]:
         rows = conn.execute(base_query + " ORDER BY ss.created_at DESC").fetchall()
     conn.close()
     return rows
+
+
+def update_session(session_id: int, session: dict) -> None:
+    """session keys: text, playtime_minutes. Screenshots aren't touched here -
+    removing a screenshot from a session is handled separately via
+    delete_screenshot, from the Photo Book."""
+    conn = get_connection()
+    conn.execute(
+        "UPDATE sessions SET duration_minutes = ?, notes = ? WHERE id = ?",
+        (session.get("playtime_minutes"), session.get("text"), session_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def delete_session(session_id: int) -> None:
+    conn = get_connection()
+    conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+    conn.commit()
+    conn.close()
+
+
+def update_review(review_id: int, review: dict) -> None:
+    """review keys: rating, body."""
+    conn = get_connection()
+    conn.execute(
+        "UPDATE reviews SET rating = ?, body = ? WHERE id = ?",
+        (review.get("rating"), review.get("body"), review_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def delete_review(review_id: int) -> None:
+    conn = get_connection()
+    conn.execute("DELETE FROM reviews WHERE id = ?", (review_id,))
+    conn.commit()
+    conn.close()
+
+
+def delete_screenshot(screenshot_id: int) -> None:
+    conn = get_connection()
+    conn.execute("DELETE FROM session_screenshots WHERE id = ?", (screenshot_id,))
+    conn.commit()
+    conn.close()
+
+def add_screenshot_to_session(session_id: int, path: str) -> int:
+    """Adds one screenshot to an existing session - used when editing a
+    session in DiaryWindow to add more screenshots after the fact."""
+    conn = get_connection()
+    cur = conn.execute(
+        "INSERT INTO session_screenshots (session_id, screenshot_path) VALUES (?, ?)",
+        (session_id, path),
+    )
+    conn.commit()
+    screenshot_id = cur.lastrowid
+    conn.close()
+    return screenshot_id

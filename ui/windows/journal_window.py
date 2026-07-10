@@ -2,9 +2,9 @@ from PySide6.QtCore import QPropertyAnimation, Signal, Qt, QTimer
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QPixmap
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGraphicsOpacityEffect,
-    QListView, QLabel, QFrame, QSizePolicy ,QMessageBox
+    QListView, QLabel, QFrame, QSizePolicy
 )
-
+from ui.widgets.confirm_modal import ConfirmModal
 from config.settings import BASE_DIR
 from ui.widgets.animated_buttons import SimpleButton
 from ui.windows.add_entry_modal import AddEntryModal
@@ -31,6 +31,7 @@ class JournalWindow(QWidget):
         # modal is parented to `self` so it overlays this page only,
         # rather than being registered as a page in the QStackedWidget
         self.add_entry_modal = AddEntryModal(self)
+        self.confirm_modal = ConfirmModal(self)
         self.add_entry_modal.entry_created.connect(self._on_entry_created)
         self.add_entry_modal.entry_updated.connect(self._on_entry_updated)
 
@@ -188,17 +189,18 @@ class JournalWindow(QWidget):
             return
 
         title = self._current_entry.get("title", "this game")
-        reply = QMessageBox.question(
-            self,
-            "Delete Game",
-            f'Are you sure you want to delete "{title}"? This cannot be undone.',
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
+        game_id = self._current_entry.get("id")
+        self.confirm_modal.open_modal(
+            title="Delete Game",
+            message=f'Are you sure you want to delete "{title}"? This cannot be undone.',
+            confirm_text="Delete",
+            on_confirm=lambda: self._delete_game(game_id),
         )
-        if reply == QMessageBox.Yes:
-            delete_game(self._current_entry.get("id"))
-            self._clear_selection()
-            self.refresh_entries_from_db()
+
+    def _delete_game(self, game_id) -> None:
+        delete_game(game_id)
+        self._clear_selection()
+        self.refresh_entries_from_db()
 
     def _clear_selection(self) -> None:
         """Resets the detail panel back to its empty state after an edit/delete."""
@@ -288,9 +290,9 @@ class JournalWindow(QWidget):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        # keep the overlay covering the full page if it's open during a resize
-        if self.add_entry_modal.isVisible():
-            self.add_entry_modal.setGeometry(self.rect())
+        for modal in (self.add_entry_modal, self.confirm_modal):
+            if modal.isVisible():
+                modal.setGeometry(self.rect())
 
     def show_with_fade(self, duration_ms: int = 400) -> None:
         self.refresh_entries_from_db()

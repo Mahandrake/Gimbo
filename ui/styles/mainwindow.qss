@@ -602,3 +602,22 @@ QComboBox#addentryfield::down-arrow {
 #photofilterscrollarea QScrollBar::sub-page:horizontal {
     background: none;
 }
+/* ===== Confirm Modal (styled delete confirmation) ===== */
+#confirmmodal {
+    background-color: rgba(0, 0, 0, 170);
+}
+#confirmcard {
+    background-color: #4C0033;
+    border: 2px solid #E63E6D;
+    border-radius: 12px;
+}
+#confirmtitle {
+    font-family: ByteBounce;
+    font-size: 30px;
+    color: #E80F88;
+}
+#confirmmessage {
+    font-family: ByteBounce;
+    font-size: 20px;
+    color: #e0e0e0;
+}

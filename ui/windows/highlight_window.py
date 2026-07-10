@@ -6,7 +6,8 @@ from PySide6.QtWidgets import (
 
 from ui.widgets.animated_buttons import SimpleButton
 from ui.widgets.highlight_card import HighlightCard
-from db import get_highlight_entries
+from ui.widgets.confirm_modal import ConfirmModal
+from db import get_highlight_entries, update_review, delete_review
 
 
 class HighlightWindow(QWidget):
@@ -21,6 +22,8 @@ class HighlightWindow(QWidget):
         self._opacity_effect = QGraphicsOpacityEffect(self)
         self.setGraphicsEffect(self._opacity_effect)
         self._opacity_effect.setOpacity(1.0)
+
+        self.confirm_modal = ConfirmModal(self)
 
     def _build_ui(self):
         root_layout = QVBoxLayout(self)
@@ -69,7 +72,25 @@ class HighlightWindow(QWidget):
 
         for row in rows:
             card = HighlightCard(row)
+            card.review_updated.connect(self._on_review_updated)
+            card.delete_requested.connect(self._on_delete_requested)
             self.entries_layout.addWidget(card)
+
+    def _on_review_updated(self, review_id: int, data: dict) -> None:
+        update_review(review_id, data)
+        self.refresh_entries_from_db()
+
+    def _on_delete_requested(self, review_id: int) -> None:
+        self.confirm_modal.open_modal(
+            title="Delete Review",
+            message="Are you sure you want to delete this review? This cannot be undone.",
+            confirm_text="Delete",
+            on_confirm=lambda: self._delete_review(review_id),
+        )
+
+    def _delete_review(self, review_id: int) -> None:
+        delete_review(review_id)
+        self.refresh_entries_from_db()
 
     def _clear_entries(self) -> None:
         while self.entries_layout.count():
@@ -80,7 +101,7 @@ class HighlightWindow(QWidget):
 
     def show_with_fade(self, duration_ms: int = 400) -> None:
         self.refresh_entries_from_db()
-        QApplication.processEvents()   # let the new cards' layout activate first, same as Index/Diary
+        QApplication.processEvents()
         self._opacity_effect.setOpacity(0.0)
         QTimer.singleShot(0, lambda: self._start_fade(duration_ms))
 
@@ -90,3 +111,8 @@ class HighlightWindow(QWidget):
         self._fade_anim.setStartValue(0.0)
         self._fade_anim.setEndValue(1.0)
         self._fade_anim.start()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.confirm_modal.isVisible():
+            self.confirm_modal.setGeometry(self.rect())
