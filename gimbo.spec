@@ -10,6 +10,12 @@ added_files = [
     ("schema.sql", "."),
 ]
 
+# Windows: gives the .exe its own icon (taskbar, Explorer, Alt-Tab).
+# Ignored harmlessly on Linux - Linux binaries don't embed an icon this way;
+# a launcher icon there is set separately via a .desktop file if you ever
+# want one, not required for the zip-and-run distribution we're doing now.
+ICON_PATH = "assets/icons/gimbo.ico"
+
 a = Analysis(
     ["main.py"],
     pathex=[],
@@ -37,6 +43,7 @@ exe = EXE(
     upx=True,
     console=False,      # no terminal window on Windows
     disable_windowed_traceback=False,
+    icon=ICON_PATH,
 )
 
 coll = COLLECT(
