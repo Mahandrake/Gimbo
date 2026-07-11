@@ -1,8 +1,6 @@
 # Gimbo
 
-A personal game journaling and tracking desktop app. Track your backlog,
-write session diaries, leave final reviews, and keep a screenshot photo
-book — all in one moody pink/purple desktop app.
+Gimbo is your gamer diary — a gentle place where every play session becomes a memory, every screenshot becomes a keepsake, and every review becomes a little message from your past self reminding you why a game mattered.
 
 ## Download (Windows / Linux)
 
@@ -72,7 +70,3 @@ GitHub Release automatically. You can also trigger it manually from the
 - SQLite (`db.py`, `schema.sql`)
 - Custom QSS styling + ByteBounce pixel font
 
-## License
-
-Add a license of your choice here before making the repo public (MIT is
-a common, permissive default if you're not sure).
