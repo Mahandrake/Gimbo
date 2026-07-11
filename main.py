@@ -1,6 +1,6 @@
 import sys
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QFontDatabase
+from PySide6.QtGui import QFontDatabase, QIcon
 from ui.windows.main_window import MainWindow
 from config.settings import BASE_DIR
 from db import init_db
@@ -27,6 +27,7 @@ init_db()
 
 def main():
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon(str(BASE_DIR / "assets" / "icons" / "highlight.png")))
     load_fonts()          # <-- must happen before setStyleSheet
     load_stylesheet(app)
     window = MainWindow()
