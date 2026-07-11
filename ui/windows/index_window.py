@@ -13,7 +13,7 @@ class IndexWindow(QWidget):
     back_requested = Signal()
     game_selected = Signal(dict)
 
-    CARD_COLUMNS = 4
+    CARD_COLUMNS = 6
 
     def __init__(self, parent=None):
         super().__init__(parent)
