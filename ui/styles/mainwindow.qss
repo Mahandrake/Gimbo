@@ -66,7 +66,28 @@ QListView#entryview {
     font-family: ByteBounce;
     font-size: 45px;
 }
-
+QListView#entryview QScrollBar:vertical {
+    background: #4C0033;
+    width: 14px;
+    margin: 0px;
+    border-radius: 7px;
+}
+QListView#entryview QScrollBar::handle:vertical {
+    background: #9C0073;
+    min-height: 30px;
+    border-radius: 7px;
+}
+QListView#entryview QScrollBar::handle:vertical:hover {
+    background: #E80F88;
+}
+QListView#entryview QScrollBar::add-line:vertical,
+QListView#entryview QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+QListView#entryview QScrollBar::add-page:vertical,
+QListView#entryview QScrollBar::sub-page:vertical {
+    background: none;
+}
 #detailbox {
     background-color: #A91079;
     border: 2px solid #E4FF30;
@@ -580,26 +601,26 @@ QComboBox#addentryfield::down-arrow {
     background-color: #000000;
     border-radius: 8px;
 }
-#photofilterscrollarea QScrollBar:horizontal {
+#photofilterscrollarea QScrollBar:vertical {
     background: #4C0033;
-    height: 14px;
+    width: 14px;
     margin: 0px;
     border-radius: 7px;
 }
-#photofilterscrollarea QScrollBar::handle:horizontal {
+#photofilterscrollarea QScrollBar::handle:vertical {
     background: #9C0073;
-    min-width: 30px;
+    min-height: 30px;
     border-radius: 7px;
 }
-#photofilterscrollarea QScrollBar::handle:horizontal:hover {
+#photofilterscrollarea QScrollBar::handle:vertical:hover {
     background: #E80F88;
 }
-#photofilterscrollarea QScrollBar::add-line:horizontal,
-#photofilterscrollarea QScrollBar::sub-line:horizontal {
-    width: 0px;
+#photofilterscrollarea QScrollBar::add-line:vertical,
+#photofilterscrollarea QScrollBar::sub-line:vertical {
+    height: 0px;
 }
-#photofilterscrollarea QScrollBar::add-page:horizontal,
-#photofilterscrollarea QScrollBar::sub-page:horizontal {
+#photofilterscrollarea QScrollBar::add-page:vertical,
+#photofilterscrollarea QScrollBar::sub-page:vertical {
     background: none;
 }
 /* ===== Confirm Modal (styled delete confirmation) ===== */

@@ -52,6 +52,8 @@ class MainWindow(QMainWindow):
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
 
+        self.dev_modal = ConfirmModal(central)
+
         self.titlebar = TitleBar(self)
         root_layout.addWidget(self.titlebar)
 
@@ -140,14 +142,22 @@ class MainWindow(QMainWindow):
         movies = AnimatedButton("Movies", str(BASE_DIR / "assets" / "gifs" / "film.png"), "animatedbutton", 225, 240)
         books = AnimatedButton("Books", str(BASE_DIR / "assets" / "gifs" / "book.gif"), "animatedbutton", 225, 240)
 
-        games.clicked.connect(self.go_to_game_hub)  # ← switch page here
-        movies.clicked.connect(lambda: print("movies"))
-        books.clicked.connect(lambda: print("books"))
+        games.clicked.connect(self.go_to_game_hub)
+        movies.clicked.connect(self._show_dev_modal)
+        books.clicked.connect(self._show_dev_modal)
 
         layout.addWidget(games)
         layout.addWidget(movies)
         layout.addWidget(books)
         return layout
+
+    def _show_dev_modal(self):
+        self.dev_modal.open_modal(
+            title="Still in Development",
+            message="This section isn't ready yet — check back soon!",
+            confirm_text="OK",
+            show_cancel=False,
+        )
 
     def go_to_game_hub(self):
         self.stack.setCurrentWidget(self.game_hub_page)
@@ -236,3 +246,5 @@ class MainWindow(QMainWindow):
         super().resizeEvent(event)
         if self.archive_confirm_modal.isVisible():
             self.archive_confirm_modal.setGeometry(self.rect())
+        if self.dev_modal.isVisible():
+            self.dev_modal.setGeometry(self.rect())

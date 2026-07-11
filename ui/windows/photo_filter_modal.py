@@ -28,18 +28,19 @@ class PhotoFilterModal(QWidget):
 
     def _build_ui(self):
         outer_layout = QVBoxLayout(self)
-        outer_layout.setContentsMargins(0, 0, 0, 80)
+        outer_layout.setContentsMargins(0, 0, 0, 60)
         outer_layout.setAlignment(Qt.AlignCenter)
         self._outer_layout = outer_layout
 
+
         self.card = QFrame(self)
         self.card.setObjectName("photofiltercard")
-        self.card.setFixedWidth(820)
-        self.card.setFixedHeight(450)
+        self.card.setFixedWidth(1000)
+        self.card.setFixedHeight(650)
 
         card_layout = QVBoxLayout(self.card)
         card_layout.setContentsMargins(24, 24, 24, 24)
-        card_layout.setSpacing(10)
+        card_layout.setSpacing(12)
 
         top_row = QHBoxLayout()
         header = QLabel("Filter by Game")
@@ -57,11 +58,16 @@ class PhotoFilterModal(QWidget):
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setFrameShape(QScrollArea.NoFrame)
 
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFrameShape(QScrollArea.NoFrame)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+
         self.cards_container = QWidget()
         self.cards_container.setAttribute(Qt.WA_StyledBackground, True)
         self.grid_layout = QGridLayout(self.cards_container)
-        self.grid_layout.setSpacing(20)
-        self.grid_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        self.grid_layout.setSpacing(30)
+        self.grid_layout.setAlignment(Qt.AlignTop | Qt.AlignCenter)
 
         self.scroll_area.setWidget(self.cards_container)
         card_layout.addWidget(self.scroll_area)
@@ -118,7 +124,7 @@ class PhotoFilterModal(QWidget):
 
             titlebar = getattr(top_level, "titlebar", None)
             titlebar_height = titlebar.height() if titlebar is not None else 0
-            self._outer_layout.setContentsMargins(0, titlebar_height, 0, 80)
+            self._outer_layout.setContentsMargins(0, titlebar_height, 0, 60)
 
         self.show()
         self.raise_()

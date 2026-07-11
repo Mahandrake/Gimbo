@@ -271,8 +271,11 @@ class JournalWindow(QWidget):
 
     def _clear_selection(self) -> None:
         """Resets the detail panel back to its empty state after an edit/delete/
-        archive/track action."""
+        archive/track action, and clears any active list selection so nothing
+        appears selected in the QListView either."""
         self._current_entry = None
+        self.entry_view.clearSelection()
+        self.entry_view.setCurrentIndex(self.entry_view.model().index(-1, -1))
         self.detail_title.setText("Select an entry")
         self.detail_text.setText("")
         self.detail_meta.setText("")
@@ -377,6 +380,7 @@ class JournalWindow(QWidget):
                 modal.setGeometry(self.rect())
 
     def show_with_fade(self, duration_ms: int = 400) -> None:
+        self._clear_selection()
         self.refresh_entries_from_db()
         self._opacity_effect.setOpacity(0.0)
         QTimer.singleShot(0, lambda: self._start_fade(duration_ms))
