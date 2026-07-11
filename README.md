@@ -56,13 +56,6 @@ contains the executable plus the Qt libraries, fonts, and assets it
 needs). On Linux you may need `libegl1`, `libxkbcommon0`, and
 `libxcb-cursor0` installed for Qt to run.
 
-## Automated builds
-
-Pushing a version tag (e.g. `git tag v1.0.0 && git push --tags`) triggers
-[`.github/workflows/release.yml`](.github/workflows/release.yml), which
-builds Windows and Linux binaries in CI and attaches them to a new
-GitHub Release automatically. You can also trigger it manually from the
-**Actions** tab.
 
 ## Tech stack
 
@@ -70,3 +63,8 @@ GitHub Release automatically. You can also trigger it manually from the
 - SQLite (`db.py`, `schema.sql`)
 - Custom QSS styling + ByteBounce pixel font
 
+
+
+License
+
+MIT — see LICENSE.
