@@ -1,14 +1,19 @@
 from PySide6.QtCore import QPropertyAnimation, Signal, Qt, QTimer
-from PySide6.QtGui import QStandardItemModel, QStandardItem, QPixmap
+from PySide6.QtGui import QStandardItemModel, QStandardItem, QPixmap, QColor, QBrush
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGraphicsOpacityEffect,
     QListView, QLabel, QFrame, QSizePolicy
 )
 from ui.widgets.confirm_modal import ConfirmModal
+from ui.windows.archive_window import ArchiveWindow
 from config.settings import BASE_DIR
 from ui.widgets.animated_buttons import SimpleButton
 from ui.windows.add_entry_modal import AddEntryModal
-from db import create_game, get_all_games, update_game, delete_game
+from db import (
+    create_game, update_game, delete_game,
+    get_journal_games, archive_game, set_game_tracked,
+    get_tracked_count, game_has_review,
+)
 
 
 class JournalWindow(QWidget):
@@ -17,6 +22,13 @@ class JournalWindow(QWidget):
     start_requested = Signal(dict)
     finished_requested = Signal(dict)
     view_requested = Signal(dict)
+
+    # Highlight color for tracked games in the backlog list - a single
+    # named constant so it's easy to re-theme later without touching the
+    # model-population logic.
+    TRACKED_ITEM_COLOR = "#FF3B3B"
+
+    MAX_TRACKED_GAMES = 3
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -28,12 +40,14 @@ class JournalWindow(QWidget):
         self.setGraphicsEffect(self._opacity_effect)
         self._opacity_effect.setOpacity(1.0)
 
-        # modal is parented to `self` so it overlays this page only,
-        # rather than being registered as a page in the QStackedWidget
+        # modals are parented to `self` so they overlay this page only,
+        # rather than being registered as pages in the QStackedWidget
         self.add_entry_modal = AddEntryModal(self)
         self.confirm_modal = ConfirmModal(self)
+        self.archive_window = ArchiveWindow(self)
         self.add_entry_modal.entry_created.connect(self._on_entry_created)
         self.add_entry_modal.entry_updated.connect(self._on_entry_updated)
+        self.archive_window.game_restored.connect(self.refresh_entries_from_db)
 
         self.refresh_entries_from_db()
 
@@ -41,10 +55,12 @@ class JournalWindow(QWidget):
         root_layout = QVBoxLayout(self)
         self.setAutoFillBackground(True)
 
-        # --- top row: back button ---
+        # --- top row: back button + archive list button ---
         top_row = QHBoxLayout()
         self.back_btn = SimpleButton("← Back", "animatedbutton", w=120, h=30)
         top_row.addWidget(self.back_btn)
+        self.archive_list_btn = SimpleButton("Archive List", "animatedbutton", w=190, h=30)
+        top_row.addWidget(self.archive_list_btn)
         root_layout.addLayout(top_row)
 
         # --- main content row: list+buttons on left, detail box on right ---
@@ -60,8 +76,8 @@ class JournalWindow(QWidget):
         self.entry_view.setModel(self.entry_model)
         self.entry_view.setSpacing(4)
         self.entry_view.setEditTriggers(QListView.NoEditTriggers)
-        self.entry_view.setFixedWidth(600)  # <- controls list width directly
-        self.entry_view.setFixedHeight(550)  # <- controls list height directly
+        self.entry_view.setFixedWidth(600)
+        self.entry_view.setFixedHeight(550)
         left_col.addWidget(self.entry_view)
 
         # button row under the list
@@ -74,30 +90,28 @@ class JournalWindow(QWidget):
             button_row.addWidget(btn)
         left_col.addLayout(button_row)
 
-        left_col.addStretch()  # pushes list+buttons to the top if there's extra vertical space
+        left_col.addStretch()
 
         # RIGHT SIDE: detail box
         self.detail_box = QFrame()
         self.detail_box.setObjectName("detailbox")
         self.detail_box.setFrameShape(QFrame.StyledPanel)
         detail_layout = QVBoxLayout(self.detail_box)
-        self.detail_box.setFixedWidth(720)  # keep width locked
+        self.detail_box.setFixedWidth(720)
         self.detail_box.setSizePolicy(
-            QSizePolicy.Fixed,  # horizontal — stays at fixed width
-            QSizePolicy.Expanding  # vertical — grows to fill available height
+            QSizePolicy.Fixed,
+            QSizePolicy.Expanding
         )
 
-        # --- top section: image+meta on the left, title+text on the right ---
         top_section = QHBoxLayout()
         top_section.setSpacing(16)
 
-        # LEFT: cover image, with meta info stacked underneath it
         cover_col = QVBoxLayout()
 
         self.detail_image = QLabel()
         self.detail_image.setObjectName("detailimage")
         self.detail_image.setAlignment(Qt.AlignCenter)
-        self.detail_image.setFixedSize(170, 240)  # fixed box, keeps layout stable
+        self.detail_image.setFixedSize(170, 240)
         self.detail_image.setScaledContents(False)
         cover_col.addWidget(self.detail_image)
 
@@ -107,9 +121,8 @@ class JournalWindow(QWidget):
         self.detail_meta.setAlignment(Qt.AlignTop)
         cover_col.addWidget(self.detail_meta)
 
-        cover_col.addStretch()  # keeps image+meta pinned to the top of the column
+        cover_col.addStretch()
 
-        # RIGHT: title + text
         right_col = QVBoxLayout()
 
         self.detail_title = QLabel("Select an entry")
@@ -121,18 +134,24 @@ class JournalWindow(QWidget):
         self.detail_text.setAlignment(Qt.AlignTop)
 
         self.start_btn = SimpleButton("Start", "startbutton", w=100, h=36)
-        self.start_btn.setVisible(False)  # hidden until an entry is selected
+        self.start_btn.setVisible(False)
         self.finished_btn = SimpleButton("Finished", "startbutton", w=150, h=36)
         self.finished_btn.setVisible(False)
+        self.track_btn = SimpleButton("Track", "startbutton", w=120, h=36)
+        self.track_btn.setVisible(False)
+        self.archive_btn = SimpleButton("Archive", "startbutton", w=130, h=36)
+        self.archive_btn.setVisible(False)
 
         right_col.addWidget(self.detail_title)
         right_col.addWidget(self.detail_text)
         right_col.addStretch()
 
         bottom_row = QHBoxLayout()
-        bottom_row.addStretch()  # pushes everything after it to the right
+        bottom_row.addStretch()
         bottom_row.addWidget(self.start_btn)
         bottom_row.addWidget(self.finished_btn)
+        bottom_row.addWidget(self.track_btn)
+        bottom_row.addWidget(self.archive_btn)
 
         top_section.addLayout(cover_col)
         top_section.addLayout(right_col, stretch=1)
@@ -141,7 +160,6 @@ class JournalWindow(QWidget):
         detail_layout.addStretch()
         detail_layout.addLayout(bottom_row)
 
-        # assemble: left column takes less space, detail box takes more
         content_row.addLayout(left_col, stretch=1)
         content_row.addWidget(self.detail_box, stretch=2)
 
@@ -149,13 +167,19 @@ class JournalWindow(QWidget):
 
     def _connect_signals(self):
         self.back_btn.clicked.connect(self.back_requested.emit)
+        self.archive_list_btn.clicked.connect(self._on_archive_list_clicked)
         self.entry_view.clicked.connect(self._on_entry_clicked)
         self.start_btn.clicked.connect(self._on_start_clicked)
         self.finished_btn.clicked.connect(self._on_finished_clicked)
+        self.track_btn.clicked.connect(self._on_track_clicked)
+        self.archive_btn.clicked.connect(self._on_archive_clicked)
         self.add_btn.clicked.connect(self._on_add_clicked)
         self.edit_btn.clicked.connect(self._on_edit_clicked)
         self.delete_btn.clicked.connect(self._on_delete_clicked)
         self.view_btn.clicked.connect(self._on_view_clicked)
+
+    def _on_archive_list_clicked(self):
+        self.archive_window.open_modal()
 
     def _on_add_clicked(self):
         self.add_entry_modal.open_modal()
@@ -202,8 +226,52 @@ class JournalWindow(QWidget):
         self._clear_selection()
         self.refresh_entries_from_db()
 
+    def _on_archive_clicked(self):
+        if not self._current_entry:
+            return
+
+        game_id = self._current_entry.get("id")
+        self.confirm_modal.open_modal(
+            title="Archive Game",
+            message="Move this game to the archive?",
+            confirm_text="Yes",
+            on_confirm=lambda: self._archive_game(game_id),
+        )
+
+    def _archive_game(self, game_id) -> None:
+        archive_game(game_id)
+        self._clear_selection()
+        self.refresh_entries_from_db()
+
+    def _on_track_clicked(self):
+        if not self._current_entry:
+            return
+
+        game_id = self._current_entry.get("id")
+        is_tracked = bool(self._current_entry.get("is_tracked"))
+
+        if is_tracked:
+            set_game_tracked(game_id, False)
+        else:
+            if get_tracked_count() >= self.MAX_TRACKED_GAMES:
+                self.confirm_modal.open_modal(
+                    title="Track Limit Reached",
+                    message=(
+                        f"You can only track up to {self.MAX_TRACKED_GAMES} games at "
+                        f"a time. Untrack another game first."
+                    ),
+                    confirm_text="OK",
+                    show_cancel=False,
+                )
+                return
+            set_game_tracked(game_id, True)
+
+        self._clear_selection()
+        self.refresh_entries_from_db()
+
     def _clear_selection(self) -> None:
-        """Resets the detail panel back to its empty state after an edit/delete."""
+        """Resets the detail panel back to its empty state after an edit/delete/
+        archive/track action."""
         self._current_entry = None
         self.detail_title.setText("Select an entry")
         self.detail_text.setText("")
@@ -211,6 +279,8 @@ class JournalWindow(QWidget):
         self.detail_image.clear()
         self.start_btn.setVisible(False)
         self.finished_btn.setVisible(False)
+        self.track_btn.setVisible(False)
+        self.archive_btn.setVisible(False)
 
     def _on_finished_clicked(self):
         if self._current_entry:
@@ -223,7 +293,7 @@ class JournalWindow(QWidget):
     def _on_entry_clicked(self, index):
         entry_data = index.data(Qt.UserRole)
         if entry_data:
-            self._current_entry = entry_data  # <-- remember selection
+            self._current_entry = entry_data
             self._show_entry_details(entry_data)
             self.entry_opened.emit(entry_data)
 
@@ -236,8 +306,12 @@ class JournalWindow(QWidget):
         self.detail_text.setText(entry.get("text", ""))
         self.detail_meta.setText(entry.get("meta", ""))
 
-        self.start_btn.setVisible(True)  # reveal now that something is selected
+        self.start_btn.setVisible(True)
         self.finished_btn.setVisible(True)
+        self.track_btn.setVisible(True)
+        self._refresh_track_button_label(entry)
+
+        self.archive_btn.setVisible(game_has_review(entry.get("id")))
 
         image_path = entry.get("image_path")
         if image_path:
@@ -274,23 +348,31 @@ class JournalWindow(QWidget):
             )
             self.detail_image.setPixmap(scaled)
 
+    def _refresh_track_button_label(self, entry: dict) -> None:
+        is_tracked = bool(entry.get("is_tracked"))
+        self.track_btn.label.setText("Untrack" if is_tracked else "Track")
+
     def load_entries(self, entries: list[dict]) -> None:
         self.entry_model.clear()
         for entry in entries:
             item = QStandardItem(entry["title"])
             item.setData(entry, Qt.UserRole)
             item.setEditable(False)
+            if entry.get("is_tracked"):
+                item.setForeground(QBrush(QColor(self.TRACKED_ITEM_COLOR)))
             self.entry_model.appendRow(item)
 
     def add_entry(self, entry: dict) -> None:
         item = QStandardItem(entry["title"])
         item.setData(entry, Qt.UserRole)
         item.setEditable(False)
+        if entry.get("is_tracked"):
+            item.setForeground(QBrush(QColor(self.TRACKED_ITEM_COLOR)))
         self.entry_model.insertRow(0, item)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        for modal in (self.add_entry_modal, self.confirm_modal):
+        for modal in (self.add_entry_modal, self.confirm_modal, self.archive_window):
             if modal.isVisible():
                 modal.setGeometry(self.rect())
 
@@ -307,8 +389,8 @@ class JournalWindow(QWidget):
         self._fade_anim.start()
 
     def refresh_entries_from_db(self) -> None:
-        """Pull all games from SQLite and repopulate the list."""
-        rows = get_all_games()
+        """Pull non-archived games from SQLite and repopulate the list."""
+        rows = get_journal_games()
         entries = [self._row_to_entry(row) for row in rows]
         self.load_entries(entries)
 
@@ -320,4 +402,5 @@ class JournalWindow(QWidget):
             "text": row["description"] or "",
             "image_path": row["cover_path"],
             "meta": row["platform"] or "",
+            "is_tracked": row["is_tracked"],
         }

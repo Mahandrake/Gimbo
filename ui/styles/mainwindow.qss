@@ -621,3 +621,64 @@ QComboBox#addentryfield::down-arrow {
     font-size: 20px;
     color: #e0e0e0;
 }
+
+/* ===== Archive List (dark blue theme, similar language to Index) ===== */
+#archivewindow {
+    background-color: rgba(0, 0, 0, 170);
+}
+#archivecard {
+    background-color: #0B0F2A;
+    border: 2px solid #2E4BFF;
+    border-radius: 12px;
+}
+#archiveheader {
+    font-family: ByteBounce;
+    font-size: 32px;
+    color: #7C9CFF;
+}
+#archivescrollarea, #archivescrollarea > QWidget > QWidget {
+    background-color: transparent;
+    border: none;
+}
+#archivedgamecard {
+    background-color: #10143A;
+    border: 2px solid #2E4BFF;
+    border-radius: 10px;
+}
+#archivedgamecard:hover {
+    border: 2px solid #5B7BFF;
+    background-color: #161C4D;
+}
+#archivedgamecardtitle {
+    font-family: ByteBounce;
+    font-size: 18px;
+    color: #E4FF30;
+}
+#archiveempty {
+    font-family: ByteBounce;
+    font-size: 24px;
+    color: #7C9CFF;
+}
+
+#archivescrollarea QScrollBar:vertical {
+    background: #0B0F2A;
+    width: 14px;
+    margin: 0px;
+    border-radius: 7px;
+}
+#archivescrollarea QScrollBar::handle:vertical {
+    background: #2E4BFF;
+    min-height: 30px;
+    border-radius: 7px;
+}
+#archivescrollarea QScrollBar::handle:vertical:hover {
+    background: #5B7BFF;
+}
+#archivescrollarea QScrollBar::add-line:vertical,
+#archivescrollarea QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+#archivescrollarea QScrollBar::add-page:vertical,
+#archivescrollarea QScrollBar::sub-page:vertical {
+    background: none;
+}

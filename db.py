@@ -29,12 +29,25 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
+def _ensure_games_columns(conn: sqlite3.Connection) -> None:
+    """Lightweight migration for databases created before the Archive/Track
+    features existed. Checks PRAGMA table_info first, so it's a no-op on
+    every startup after the first one. Safe to call every time."""
+    existing_cols = {row["name"] for row in conn.execute("PRAGMA table_info(games)").fetchall()}
+    if "is_archived" not in existing_cols:
+        conn.execute("ALTER TABLE games ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0")
+    if "is_tracked" not in existing_cols:
+        conn.execute("ALTER TABLE games ADD COLUMN is_tracked INTEGER NOT NULL DEFAULT 0")
+    conn.commit()
+
+
 def init_db() -> None:
     """Create tables if they don't exist yet. Safe to call every startup."""
     conn = get_connection()
     with open(SCHEMA_PATH, "r") as f:
         conn.executescript(f.read())
     conn.commit()
+    _ensure_games_columns(conn)
     conn.close()
 
 
@@ -55,7 +68,7 @@ def create_game(entry: dict) -> int:
         (
             entry["title"],
             entry.get("platform"),
-            entry.get("image_path"),  # <-- changed from entry.get("cover_path")
+            entry.get("image_path"),
             entry.get("description"),
         ),
     )
@@ -66,9 +79,33 @@ def create_game(entry: dict) -> int:
 
 
 def get_all_games() -> list[sqlite3.Row]:
-    """Used lazily by the journal list page when it's shown."""
+    """All games regardless of archive status. Used by Index, Photo Book
+    (filter modal), and anywhere else that should NOT be affected by
+    archiving a game out of the Journal."""
     conn = get_connection()
     rows = conn.execute("SELECT * FROM games ORDER BY created_at DESC").fetchall()
+    conn.close()
+    return rows
+
+
+def get_journal_games() -> list[sqlite3.Row]:
+    """Games shown on the Journal page - excludes archived games. Kept
+    separate from get_all_games() so Index, Photo Book, and Highlights
+    are unaffected by archiving."""
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM games WHERE is_archived = 0 ORDER BY created_at DESC"
+    ).fetchall()
+    conn.close()
+    return rows
+
+
+def get_archived_games() -> list[sqlite3.Row]:
+    """Used by the Archive List modal."""
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM games WHERE is_archived = 1 ORDER BY created_at DESC"
+    ).fetchall()
     conn.close()
     return rows
 
@@ -81,10 +118,66 @@ def get_game(game_id: int) -> sqlite3.Row | None:
 
 
 def delete_game(game_id: int) -> None:
+    """Permanent delete - cascades to sessions, session_screenshots, and
+    reviews via the ON DELETE CASCADE foreign keys in schema.sql. Used both
+    for the original Journal 'Delete' action and for the Archive List's
+    'Delete Permanently' action."""
     conn = get_connection()
     conn.execute("DELETE FROM games WHERE id = ?", (game_id,))
     conn.commit()
     conn.close()
+
+
+def archive_game(game_id: int) -> None:
+    """Moves a game to the archive. Nothing is deleted - sessions, reviews,
+    and screenshots are untouched; the game simply stops appearing in
+    get_journal_games()."""
+    conn = get_connection()
+    conn.execute("UPDATE games SET is_archived = 1 WHERE id = ?", (game_id,))
+    conn.commit()
+    conn.close()
+
+
+def restore_game(game_id: int) -> None:
+    """Moves a game back out of the archive and into the Journal."""
+    conn = get_connection()
+    conn.execute("UPDATE games SET is_archived = 0 WHERE id = ?", (game_id,))
+    conn.commit()
+    conn.close()
+
+
+def set_game_tracked(game_id: int, tracked: bool) -> None:
+    conn = get_connection()
+    conn.execute(
+        "UPDATE games SET is_tracked = ? WHERE id = ?",
+        (1 if tracked else 0, game_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_tracked_count() -> int:
+    """Archived games are excluded from the count, so archiving a tracked
+    game frees up a tracking slot without requiring the user to untrack
+    it first."""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT COUNT(*) AS count FROM games WHERE is_tracked = 1 AND is_archived = 0"
+    ).fetchone()
+    conn.close()
+    return row["count"] if row else 0
+
+
+def game_has_review(game_id: int) -> bool:
+    """Used by JournalWindow to decide whether the Archive button should be
+    shown - a game counts as 'finished' if it has a review row, matching
+    the is_finished-via-review pattern used elsewhere."""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT 1 FROM reviews WHERE game_id = ? LIMIT 1", (game_id,)
+    ).fetchone()
+    conn.close()
+    return row is not None
 
 
 # ---------------------------------------------------------------------------
@@ -171,6 +264,8 @@ def update_game(game_id: int, entry: dict) -> None:
     """
     entry uses the same shape as create_game: {title, platform, description, image_path}.
     Updates the existing row in place rather than inserting a new one.
+    Doesn't touch is_archived/is_tracked, so editing a game never disturbs
+    its archive/track state.
     """
     conn = get_connection()
     conn.execute(

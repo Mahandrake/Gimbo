@@ -1,14 +1,15 @@
 from PySide6.QtWidgets import QWidget, QMainWindow, QHBoxLayout, QVBoxLayout, QStackedWidget
 from PySide6.QtCore import Qt, QPropertyAnimation
 
-from db import create_session, create_review
+from db import create_session, create_review, archive_game
 from ui.factories import UiFactory
 from ui.widgets.animated_buttons import AnimatedButton
+from ui.widgets.confirm_modal import ConfirmModal
 from ui.windows.game_hub_window import GameHubWindow
 from ui.windows.journal_window import JournalWindow
 from ui.windows.writing_window import WritingPage
 from ui.windows.finished_window import FinishedPage
-from ui.windows.index_window import IndexWindow  # <-- new
+from ui.windows.index_window import IndexWindow
 from ui.windows.diary_window import DiaryWindow
 from ui.windows.highlight_window import HighlightWindow
 from ui.windows.album_window import AlbumWindow
@@ -99,7 +100,7 @@ class MainWindow(QMainWindow):
 
         # build diary page
         self.diary_page = DiaryWindow()
-        self.diary_page.back_requested.connect(self._go_back_from_diary)  # <-- changed
+        self.diary_page.back_requested.connect(self._go_back_from_diary)
         self._diary_return_page = self.index_page
 
         # build highlight page
@@ -111,6 +112,12 @@ class MainWindow(QMainWindow):
         self.album_page = AlbumWindow()
         self.game_hub_page.photobook_requested.connect(self.go_to_album_page)
         self.album_page.back_requested.connect(self.go_to_game_hub)
+
+        # Confirmation overlay shown right after saving a review, offering
+        # to archive the now-finished game. Parented to central, so - same
+        # as the per-page ConfirmModals - self.window() resolves back to
+        # this MainWindow when it's opened.
+        self.archive_confirm_modal = ConfirmModal(central)
 
         # register pages
         self.stack.addWidget(self.home_page)  # index 0
@@ -190,10 +197,24 @@ class MainWindow(QMainWindow):
             target.show_with_fade()
 
     def handle_review_saved(self, review_entry: dict):
+        game_id = review_entry.get("game_id")
         create_review(
-            review_entry.get("game_id"),
+            game_id,
             {"rating": review_entry.get("rating"), "body": review_entry.get("text")},
         )
+        # Finishing a review means the game is now "finished" - offer to
+        # archive it right away instead of requiring a separate trip back
+        # to the Journal page.
+        self.archive_confirm_modal.open_modal(
+            title="Archive Game?",
+            message="Move this game to the archive?",
+            confirm_text="Yes",
+            on_confirm=lambda: self._archive_and_return_to_journal(game_id),
+            on_cancel=self.go_to_journal_page,
+        )
+
+    def _archive_and_return_to_journal(self, game_id) -> None:
+        archive_game(game_id)
         self.go_to_journal_page()
 
     def handle_session_saved(self, session_entry: dict):
@@ -210,3 +231,8 @@ class MainWindow(QMainWindow):
         self._fade_anim.setStartValue(0.0)
         self._fade_anim.setEndValue(1.0)
         self._fade_anim.start()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.archive_confirm_modal.isVisible():
+            self.archive_confirm_modal.setGeometry(self.rect())

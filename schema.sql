@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS games
     platform    TEXT,
     cover_path  TEXT,
     description TEXT,
+    is_archived INTEGER NOT NULL DEFAULT 0,
+    is_tracked  INTEGER NOT NULL DEFAULT 0,
     created_at  TEXT DEFAULT CURRENT_TIMESTAMP
 );
 

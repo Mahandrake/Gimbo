@@ -7,7 +7,8 @@ from ui.widgets.animated_buttons import SimpleButton
 class ConfirmModal(QWidget):
     """Reusable styled Yes/No confirmation overlay, used anywhere a
     QMessageBox.question() would otherwise be used (deleting games,
-    sessions, reviews, screenshots, etc.)."""
+    sessions, reviews, screenshots, etc.). Can also act as a single-button
+    "OK" alert via show_cancel=False (used for the track-limit warning)."""
 
     confirmed = Signal()
 
@@ -16,6 +17,7 @@ class ConfirmModal(QWidget):
         self.setObjectName("confirmmodal")
         self.setAttribute(Qt.WA_StyledBackground, True)
         self._on_confirm_callback = None
+        self._on_cancel_callback = None
         self._build_ui()
         self._connect_signals()
         self.hide()
@@ -54,27 +56,39 @@ class ConfirmModal(QWidget):
         outer_layout.addWidget(self.card)
 
     def _connect_signals(self):
-        self.cancel_btn.clicked.connect(self.close_modal)
+        self.cancel_btn.clicked.connect(self._on_cancel)
         self.confirm_btn.clicked.connect(self._on_confirm)
 
     def mousePressEvent(self, event):
         if not self.card.geometry().contains(event.pos()):
-            self.close_modal()
+            self._on_cancel()
 
     def _on_confirm(self):
         self.close_modal()
         callback = self._on_confirm_callback
         self._on_confirm_callback = None
+        self._on_cancel_callback = None
         if callback is not None:
             callback()
         self.confirmed.emit()
 
+    def _on_cancel(self):
+        self.close_modal()
+        callback = self._on_cancel_callback
+        self._on_confirm_callback = None
+        self._on_cancel_callback = None
+        if callback is not None:
+            callback()
+
     def open_modal(self, title: str = "Are you sure?", message: str = "",
-                   confirm_text: str = "Delete", on_confirm=None) -> None:
+                   confirm_text: str = "Delete", on_confirm=None,
+                   on_cancel=None, show_cancel: bool = True) -> None:
         self.title_label.setText(title)
         self.message_label.setText(message)
         self.confirm_btn.label.setText(confirm_text)
+        self.cancel_btn.setVisible(show_cancel)
         self._on_confirm_callback = on_confirm
+        self._on_cancel_callback = on_cancel
 
         top_level = self.window()
         if top_level is not None:
