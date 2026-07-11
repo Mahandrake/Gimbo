@@ -8,6 +8,7 @@ block_cipher = None
 added_files = [
     ("assets", "assets"),
     ("schema.sql", "."),
+    ("ui/styles", "ui/styles"),
 ]
 
 # Windows: gives the .exe its own icon (taskbar, Explorer, Alt-Tab).
