@@ -29,6 +29,7 @@ class ArchivedGameCard(QFrame):
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(6)
 
+
         self.cover_label = QLabel()
         self.cover_label.setObjectName("archivedgamecardcover")
         self.cover_label.setFixedSize(self.COVER_W, self.COVER_H)
@@ -49,8 +50,8 @@ class ArchivedGameCard(QFrame):
         self.title_label.setWordWrap(True)
         self.title_label.setFixedWidth(self.COVER_W)
 
-        self.restore_btn = SimpleButton("Restore", "animatedbutton", w=170, h=26)
-        self.delete_btn = SimpleButton("Delete", "animatedbutton", w=170, h=26)
+        self.restore_btn = SimpleButton("Restore", "animatedbutton", w=150, h=26)
+        self.delete_btn = SimpleButton("Delete", "animatedbutton", w=150, h=26)
 
         layout.addWidget(self.cover_label)
         layout.addWidget(self.title_label)

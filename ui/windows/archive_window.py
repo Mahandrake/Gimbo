@@ -40,7 +40,7 @@ class ArchiveWindow(QWidget):
 
         self.card = QFrame(self)
         self.card.setObjectName("archivecard")
-        self.card.setFixedWidth(1000)
+        self.card.setFixedWidth(950)
         self.card.setFixedHeight(650)
 
         card_layout = QVBoxLayout(self.card)
@@ -67,7 +67,7 @@ class ArchiveWindow(QWidget):
         self.cards_container.setAttribute(Qt.WA_StyledBackground, True)
         self.grid_layout = QGridLayout(self.cards_container)
         self.grid_layout.setSpacing(20)
-        self.grid_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        self.grid_layout.setAlignment(Qt.AlignTop | Qt.AlignCenter)
 
         self.scroll_area.setWidget(self.cards_container)
         card_layout.addWidget(self.scroll_area)
