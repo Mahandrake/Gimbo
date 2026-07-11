@@ -67,4 +67,4 @@ needs). On Linux you may need `libegl1`, `libxkbcommon0`, and
 
 License
 
-MIT — see LICENSE.
+MIT.
