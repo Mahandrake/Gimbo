@@ -17,10 +17,34 @@ Design notes:
 
 import sqlite3
 from pathlib import Path
+import os
+import sys
+from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "gimbo.db"
-SCHEMA_PATH = Path(__file__).parent / "schema.sql"
+from config.settings import BASE_DIR  # already frozen-aware, see settings.py
 
+
+def _get_user_data_dir() -> Path:
+    """Where gimbo.db should actually live once the app is packaged.
+    Falls back to the project folder when running from source, so
+    behavior for you during development doesn't change at all."""
+    if not getattr(sys, "frozen", False):
+        return Path(__file__).parent
+
+    if sys.platform == "win32":
+        base = Path(os.environ.get("APPDATA", Path.home()))
+    elif sys.platform == "darwin":
+        base = Path.home() / "Library" / "Application Support"
+    else:  # Linux and other POSIX
+        base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+
+    data_dir = base / "Gimbo"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    return data_dir
+
+
+DB_PATH = _get_user_data_dir() / "gimbo.db"
+SCHEMA_PATH = BASE_DIR / "schema.sql"
 
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)

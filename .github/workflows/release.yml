@@ -1,0 +1,76 @@
+name: Build and Release Gimbo
+
+# Runs a build automatically whenever you push a tag like "v1.0.0",
+# or manually via the Actions tab ("workflow_dispatch").
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_name: Gimbo-windows
+          - os: ubuntu-latest
+            artifact_name: Gimbo-linux
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Install Qt runtime libraries (Linux only)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libxkbcommon0 libxcb-cursor0 libxcb-image0 libxcb-keysyms1 libxcb-render-util0
+
+      - name: Build with PyInstaller
+        run: pyinstaller gimbo.spec
+
+      - name: Package build (Windows)
+        if: matrix.os == 'windows-latest'
+        run: Compress-Archive -Path dist/Gimbo/* -DestinationPath ${{ matrix.artifact_name }}.zip
+
+      - name: Package build (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cd dist
+          zip -r ../${{ matrix.artifact_name }}.zip Gimbo
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_name }}.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*.zip
+          generate_release_notes: true
