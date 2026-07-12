@@ -22,7 +22,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Signal, QUrl, QUrlQuery
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 
-from config.settings import RAWG_API_KEY, RAWG_BASE_URL
+from config.settings import RAWG_PROXY_BASE_URL
 from db import get_rawg_cache_dir
 
 
@@ -49,7 +49,7 @@ class RawgClient(QObject):
 
     def search_games(self, query: str) -> None:
         query = query.strip()
-        if not query or not RAWG_API_KEY:
+        if not query:
             self.suggestions_ready.emit([])
             return
 
@@ -58,21 +58,19 @@ class RawgClient(QObject):
             self.suggestions_ready.emit(cached)
             return
 
-        # Cancel any in-flight search so a stale reply can't clobber newer
-        # results once the user has kept typing.
         if self._active_search_reply is not None:
             self._active_search_reply.abort()
             self._active_search_reply = None
 
-        url = QUrl(f"{RAWG_BASE_URL}/games")
+        url = QUrl(f"{RAWG_PROXY_BASE_URL}/games")
         q = QUrlQuery()
-        q.addQueryItem("key", RAWG_API_KEY)
         q.addQueryItem("search", query)
         q.addQueryItem("page_size", str(self.SEARCH_PAGE_SIZE))
         url.setQuery(q)
 
         reply = self._manager.get(QNetworkRequest(url))
         self._active_search_reply = reply
+        reply.finished.connect(lambda: self._on_search_finished(reply, query))
         reply.finished.connect(lambda: self._on_search_finished(reply, query))
 
     def _on_search_finished(self, reply: QNetworkReply, query: str) -> None:
@@ -115,15 +113,7 @@ class RawgClient(QObject):
             self.details_ready.emit(cached)
             return
 
-        if not RAWG_API_KEY:
-            self.error.emit("No RAWG API key configured.")
-            return
-
-        url = QUrl(f"{RAWG_BASE_URL}/games/{rawg_id}")
-        q = QUrlQuery()
-        q.addQueryItem("key", RAWG_API_KEY)
-        url.setQuery(q)
-
+        url = QUrl(f"{RAWG_PROXY_BASE_URL}/games/{rawg_id}")
         reply = self._manager.get(QNetworkRequest(url))
         reply.finished.connect(lambda: self._on_details_finished(reply, rawg_id))
 
