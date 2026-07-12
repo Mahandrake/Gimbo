@@ -121,6 +121,13 @@ class JournalWindow(QWidget):
         self.detail_meta.setAlignment(Qt.AlignTop)
         cover_col.addWidget(self.detail_meta)
 
+        self.detail_rawg_meta = QLabel("")
+        self.detail_rawg_meta.setObjectName("detailrawgmeta")
+        self.detail_rawg_meta.setWordWrap(True)
+        self.detail_rawg_meta.setAlignment(Qt.AlignTop)
+        self.detail_rawg_meta.setVisible(False)
+        cover_col.addWidget(self.detail_rawg_meta)
+
         cover_col.addStretch()
 
         right_col = QVBoxLayout()
@@ -284,6 +291,8 @@ class JournalWindow(QWidget):
         self.finished_btn.setVisible(False)
         self.track_btn.setVisible(False)
         self.archive_btn.setVisible(False)
+        self.detail_rawg_meta.setText("")
+        self.detail_rawg_meta.setVisible(False)
 
     def _on_finished_clicked(self):
         if self._current_entry:
@@ -304,10 +313,32 @@ class JournalWindow(QWidget):
         if self._current_entry:
             self.start_requested.emit(self._current_entry)
 
+    def _format_rawg_meta(self, entry: dict) -> str:
+        lines = []
+        rating = entry.get("rawg_rating")
+        if rating:
+            lines.append(f"★ {rating:.1f}/5 RAWG score")
+        metacritic = entry.get("rawg_metacritic")
+        if metacritic:
+            lines.append(f"Metacritic {metacritic}")
+        playtime = entry.get("rawg_playtime")
+        if playtime:
+            lines.append(f"~{playtime}h to beat")
+        released = entry.get("rawg_released")
+        if released:
+            lines.append(f"Released {released}")
+        genres = entry.get("rawg_genres")
+        if genres:
+            lines.append(genres)
+        return "\n".join(lines)
+
     def _show_entry_details(self, entry: dict) -> None:
         self.detail_title.setText(entry.get("title", ""))
         self.detail_text.setText(entry.get("text", ""))
         self.detail_meta.setText(entry.get("meta", ""))
+        rawg_text = self._format_rawg_meta(entry)
+        self.detail_rawg_meta.setText(rawg_text)
+        self.detail_rawg_meta.setVisible(bool(rawg_text))
 
         self.start_btn.setVisible(True)
         self.finished_btn.setVisible(True)
@@ -399,7 +430,6 @@ class JournalWindow(QWidget):
         self.load_entries(entries)
 
     def _row_to_entry(self, row) -> dict:
-        """Translate a sqlite3.Row from the `games` table into this page's dict shape."""
         return {
             "id": row["id"],
             "title": row["title"],
@@ -407,4 +437,10 @@ class JournalWindow(QWidget):
             "image_path": row["cover_path"],
             "meta": row["platform"] or "",
             "is_tracked": row["is_tracked"],
+            "rawg_id": row["rawg_id"],
+            "rawg_rating": row["rawg_rating"],
+            "rawg_metacritic": row["rawg_metacritic"],
+            "rawg_playtime": row["rawg_playtime"],
+            "rawg_released": row["rawg_released"],
+            "rawg_genres": row["rawg_genres"],
         }

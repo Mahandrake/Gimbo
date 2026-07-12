@@ -703,3 +703,27 @@ QComboBox#addentryfield::down-arrow {
 #archivescrollarea QScrollBar::sub-page:vertical {
     background: none;
 }
+/* ===== RAWG integration (Journal only) ===== */
+#detailrawgmeta {
+    font-family: ByteBounce;
+    font-size: 22px;
+    color: #7C9CFF;
+    padding-top: 8px;
+}
+#rawgstatuslabel {
+    font-family: ByteBounce;
+    font-size: 16px;
+    color: #E4FF30;
+    padding-top: 2px;
+}
+QListView#rawgsuggestionpopup {
+    background-color: #420516;
+    color: #ffffff;
+    border: 1px solid #E63E6D;
+    border-radius: 6px;
+    font-family: ByteBounce;
+    font-size: 18px;
+    selection-background-color: #9C0073;
+    selection-color: #ffffff;
+    outline: none;
+}

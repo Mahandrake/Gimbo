@@ -42,6 +42,12 @@ def _get_user_data_dir() -> Path:
     data_dir.mkdir(parents=True, exist_ok=True)
     return data_dir
 
+def get_rawg_cache_dir() -> Path:
+    """Local disk cache for downloaded RAWG cover art, so a game already in
+    the library never re-downloads its cover on a later launch."""
+    cache_dir = _get_user_data_dir() / "rawg_cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return cache_dir
 
 DB_PATH = _get_user_data_dir() / "gimbo.db"
 SCHEMA_PATH = BASE_DIR / "schema.sql"
@@ -54,14 +60,27 @@ def get_connection() -> sqlite3.Connection:
 
 
 def _ensure_games_columns(conn: sqlite3.Connection) -> None:
-    """Lightweight migration for databases created before the Archive/Track
-    features existed. Checks PRAGMA table_info first, so it's a no-op on
-    every startup after the first one. Safe to call every time."""
     existing_cols = {row["name"] for row in conn.execute("PRAGMA table_info(games)").fetchall()}
     if "is_archived" not in existing_cols:
         conn.execute("ALTER TABLE games ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0")
     if "is_tracked" not in existing_cols:
         conn.execute("ALTER TABLE games ADD COLUMN is_tracked INTEGER NOT NULL DEFAULT 0")
+
+    # RAWG integration columns (v1.0.4) - cached metadata from the RAWG API,
+    # written once when a game is created/edited via AddEntryModal so the
+    # Journal detail panel never has to re-fetch anything to display it.
+    rawg_columns = {
+        "rawg_id": "INTEGER",
+        "rawg_rating": "REAL",
+        "rawg_metacritic": "INTEGER",
+        "rawg_playtime": "INTEGER",
+        "rawg_released": "TEXT",
+        "rawg_genres": "TEXT",
+    }
+    for col, col_type in rawg_columns.items():
+        if col not in existing_cols:
+            conn.execute(f"ALTER TABLE games ADD COLUMN {col} {col_type}")
+
     conn.commit()
 
 
@@ -82,18 +101,27 @@ def init_db() -> None:
 def create_game(entry: dict) -> int:
     """
     entry is the dict emitted by AddEntryModal.entry_created:
-    {title, platform, description, image_path}. The `cover_path` column name
-    in the games table stays as-is (it's just the DB's internal naming);
-    this function is what maps AddEntryModal's `image_path` key onto it.
+    {title, platform, description, image_path, rawg_id, rawg_rating,
+    rawg_metacritic, rawg_playtime, rawg_released, rawg_genres}.
+    The rawg_* keys are optional/None when the game wasn't linked to RAWG.
     """
     conn = get_connection()
     cur = conn.execute(
-        "INSERT INTO games (title, platform, cover_path, description) VALUES (?, ?, ?, ?)",
+        """INSERT INTO games
+           (title, platform, cover_path, description,
+            rawg_id, rawg_rating, rawg_metacritic, rawg_playtime, rawg_released, rawg_genres)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             entry["title"],
             entry.get("platform"),
             entry.get("image_path"),
             entry.get("description"),
+            entry.get("rawg_id"),
+            entry.get("rawg_rating"),
+            entry.get("rawg_metacritic"),
+            entry.get("rawg_playtime"),
+            entry.get("rawg_released"),
+            entry.get("rawg_genres"),
         ),
     )
     conn.commit()
@@ -286,19 +314,30 @@ def get_reviews_for_game(game_id: int) -> list[sqlite3.Row]:
 
 def update_game(game_id: int, entry: dict) -> None:
     """
-    entry uses the same shape as create_game: {title, platform, description, image_path}.
-    Updates the existing row in place rather than inserting a new one.
-    Doesn't touch is_archived/is_tracked, so editing a game never disturbs
-    its archive/track state.
+    Same shape as create_game. Doesn't touch is_archived/is_tracked, so
+    editing a game never disturbs its archive/track state. rawg_* fields
+    ARE overwritten here - AddEntryModal is responsible for carrying
+    forward the existing linkage when the user doesn't re-pick from RAWG,
+    so this stays a plain "write what you were given" function.
     """
     conn = get_connection()
     conn.execute(
-        "UPDATE games SET title = ?, platform = ?, cover_path = ?, description = ? WHERE id = ?",
+        """UPDATE games
+           SET title = ?, platform = ?, cover_path = ?, description = ?,
+               rawg_id = ?, rawg_rating = ?, rawg_metacritic = ?,
+               rawg_playtime = ?, rawg_released = ?, rawg_genres = ?
+           WHERE id = ?""",
         (
             entry.get("title"),
             entry.get("platform"),
             entry.get("image_path"),
             entry.get("description"),
+            entry.get("rawg_id"),
+            entry.get("rawg_rating"),
+            entry.get("rawg_metacritic"),
+            entry.get("rawg_playtime"),
+            entry.get("rawg_released"),
+            entry.get("rawg_genres"),
             game_id,
         ),
     )

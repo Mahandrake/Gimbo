@@ -1,5 +1,6 @@
 .idea/
 .venv/
+config/rawg_api_key.txt
 gimbo.db
 
 __pycache__/
