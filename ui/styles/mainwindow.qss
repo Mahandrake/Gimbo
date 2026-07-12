@@ -727,3 +727,69 @@ QListView#rawgsuggestionpopup {
     selection-color: #ffffff;
     outline: none;
 }
+/* ===== Journal: per-field RAWG metadata rows ===== */
+#rawgmetaitem {
+    font-family: ByteBounce;
+    font-size: 18px;
+    color: #7C9CFF;
+}
+
+/* ===== Journal: detail title (marquee) ===== */
+#detailtitle {
+    color: #E4FF30;
+}
+
+/* ===== Journal: description scroll area ===== */
+#detailtextscroll, #detailtextscroll > QWidget > QWidget {
+    background-color: transparent;
+    border: none;
+}
+#detailtext {
+    color: #F2D9E8;  /* soft pink-white - readable on the #A91079 detail box, distinct from the yellow title */
+}
+#detailtextscroll QScrollBar:vertical {
+    background: #4C0033;
+    width: 14px;
+    margin: 0px;
+    border-radius: 7px;
+}
+#detailtextscroll QScrollBar::handle:vertical {
+    background: #9C0073;
+    min-height: 30px;
+    border-radius: 7px;
+}
+#detailtextscroll QScrollBar::handle:vertical:hover {
+    background: #E80F88;
+}
+#detailtextscroll QScrollBar::add-line:vertical,
+#detailtextscroll QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+#detailtextscroll QScrollBar::add-page:vertical,
+#detailtextscroll QScrollBar::sub-page:vertical {
+    background: none;
+}
+
+/* ===== Journal: entry list horizontal scrollbar (mirrors the existing vertical one) ===== */
+QListView#entryview QScrollBar:horizontal {
+    background: #4C0033;
+    height: 14px;
+    margin: 0px;
+    border-radius: 7px;
+}
+QListView#entryview QScrollBar::handle:horizontal {
+    background: #9C0073;
+    min-width: 30px;
+    border-radius: 7px;
+}
+QListView#entryview QScrollBar::handle:horizontal:hover {
+    background: #E80F88;
+}
+QListView#entryview QScrollBar::add-line:horizontal,
+QListView#entryview QScrollBar::sub-line:horizontal {
+    width: 0px;
+}
+QListView#entryview QScrollBar::add-page:horizontal,
+QListView#entryview QScrollBar::sub-page:horizontal {
+    background: none;
+}

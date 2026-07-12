@@ -1,10 +1,11 @@
 from PySide6.QtCore import QPropertyAnimation, Signal, Qt, QTimer
-from PySide6.QtGui import QStandardItemModel, QStandardItem, QPixmap, QColor, QBrush
+from PySide6.QtGui import QStandardItemModel, QStandardItem, QPixmap, QColor, QBrush, QFontMetrics
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGraphicsOpacityEffect,
-    QListView, QLabel, QFrame, QSizePolicy
+    QListView, QLabel, QFrame, QSizePolicy, QScrollArea
 )
 from ui.widgets.confirm_modal import ConfirmModal
+from ui.widgets.marquee_label import MarqueeLabel
 from ui.windows.archive_window import ArchiveWindow
 from config.settings import BASE_DIR
 from ui.widgets.animated_buttons import SimpleButton
@@ -29,6 +30,7 @@ class JournalWindow(QWidget):
     TRACKED_ITEM_COLOR = "#FF3B3B"
 
     MAX_TRACKED_GAMES = 3
+    META_LABEL_WIDTH = 170
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -121,24 +123,58 @@ class JournalWindow(QWidget):
         self.detail_meta.setAlignment(Qt.AlignTop)
         cover_col.addWidget(self.detail_meta)
 
-        self.detail_rawg_meta = QLabel("")
-        self.detail_rawg_meta.setObjectName("detailrawgmeta")
-        self.detail_rawg_meta.setWordWrap(True)
-        self.detail_rawg_meta.setAlignment(Qt.AlignTop)
-        self.detail_rawg_meta.setVisible(False)
-        cover_col.addWidget(self.detail_rawg_meta)
+        # --- RAWG metadata: one dedicated row per field, each fixed-width and
+        # elided rather than wrapped, so a long genre list or long date string
+        # can never push into / collide with the row below it. ---
+        self.rawg_meta_container = QWidget()
+        self.rawg_meta_container.setObjectName("rawgmetacontainer")
+        rawg_meta_layout = QVBoxLayout(self.rawg_meta_container)
+        rawg_meta_layout.setContentsMargins(0, 6, 0, 0)
+        rawg_meta_layout.setSpacing(4)
+
+        self.rawg_rating_label = QLabel("")
+        self.rawg_metacritic_label = QLabel("")
+        self.rawg_playtime_label = QLabel("")
+        self.rawg_released_label = QLabel("")
+        self.rawg_genres_label = QLabel("")
+
+        self._rawg_meta_labels = [
+            self.rawg_rating_label, self.rawg_metacritic_label,
+            self.rawg_playtime_label, self.rawg_released_label, self.rawg_genres_label,
+        ]
+        for lbl in self._rawg_meta_labels:
+            lbl.setObjectName("rawgmetaitem")
+            lbl.setFixedWidth(self.META_LABEL_WIDTH)
+            lbl.setWordWrap(False)
+            lbl.setVisible(False)
+            rawg_meta_layout.addWidget(lbl)
+
+        self.rawg_meta_container.setVisible(False)
+        cover_col.addWidget(self.rawg_meta_container)
 
         cover_col.addStretch()
 
         right_col = QVBoxLayout()
 
-        self.detail_title = QLabel("Select an entry")
+        self.detail_title = MarqueeLabel("Select an entry")
         self.detail_title.setObjectName("detailtitle")
+        self.detail_title.setFixedHeight(50)  # stable height so overflow toggling doesn't jump the layout
 
         self.detail_text = QLabel("")
         self.detail_text.setObjectName("detailtext")
         self.detail_text.setWordWrap(True)
-        self.detail_text.setAlignment(Qt.AlignTop)
+        self.detail_text.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+
+        self.detail_text_scroll = QScrollArea()
+        self.detail_text_scroll.setObjectName("detailtextscroll")
+        self.detail_text_scroll.setAttribute(Qt.WA_StyledBackground, True)
+        self.detail_text_scroll.viewport().setAttribute(Qt.WA_StyledBackground, True)
+        self.detail_text_scroll.setWidgetResizable(True)
+        self.detail_text_scroll.setFrameShape(QFrame.NoFrame)
+        self.detail_text_scroll.setFixedHeight(220)
+        self.detail_text_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.detail_text_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.detail_text_scroll.setWidget(self.detail_text)
 
         self.start_btn = SimpleButton("Start", "startbutton", w=100, h=36)
         self.start_btn.setVisible(False)
@@ -150,7 +186,7 @@ class JournalWindow(QWidget):
         self.archive_btn.setVisible(False)
 
         right_col.addWidget(self.detail_title)
-        right_col.addWidget(self.detail_text)
+        right_col.addWidget(self.detail_text_scroll)
         right_col.addStretch()
 
         bottom_row = QHBoxLayout()
@@ -291,8 +327,11 @@ class JournalWindow(QWidget):
         self.finished_btn.setVisible(False)
         self.track_btn.setVisible(False)
         self.archive_btn.setVisible(False)
-        self.detail_rawg_meta.setText("")
-        self.detail_rawg_meta.setVisible(False)
+        for lbl in self._rawg_meta_labels:
+            lbl.setText("")
+            lbl.setToolTip("")
+            lbl.setVisible(False)
+        self.rawg_meta_container.setVisible(False)
 
     def _on_finished_clicked(self):
         if self._current_entry:
@@ -313,32 +352,62 @@ class JournalWindow(QWidget):
         if self._current_entry:
             self.start_requested.emit(self._current_entry)
 
-    def _format_rawg_meta(self, entry: dict) -> str:
-        lines = []
+    def _set_elided_meta_label(self, label: QLabel, text: str) -> None:
+        metrics = QFontMetrics(label.font())
+        elided = metrics.elidedText(text, Qt.ElideRight, self.META_LABEL_WIDTH - 4)
+        label.setText(elided)
+        label.setToolTip(text)  # full value still available on hover
+
+    def _update_rawg_meta_display(self, entry: dict) -> None:
+        has_any = False
+
         rating = entry.get("rawg_rating")
         if rating:
-            lines.append(f"★ {rating:.1f}/5 RAWG score")
+            self._set_elided_meta_label(self.rawg_rating_label, f"★ {rating:.1f}/5 RAWG score")
+            self.rawg_rating_label.setVisible(True)
+            has_any = True
+        else:
+            self.rawg_rating_label.setVisible(False)
+
         metacritic = entry.get("rawg_metacritic")
         if metacritic:
-            lines.append(f"Metacritic {metacritic}")
+            self._set_elided_meta_label(self.rawg_metacritic_label, f"Metacritic {metacritic}")
+            self.rawg_metacritic_label.setVisible(True)
+            has_any = True
+        else:
+            self.rawg_metacritic_label.setVisible(False)
+
         playtime = entry.get("rawg_playtime")
         if playtime:
-            lines.append(f"~{playtime}h to beat")
+            self._set_elided_meta_label(self.rawg_playtime_label, f"~{playtime}h to beat")
+            self.rawg_playtime_label.setVisible(True)
+            has_any = True
+        else:
+            self.rawg_playtime_label.setVisible(False)
+
         released = entry.get("rawg_released")
         if released:
-            lines.append(f"Released {released}")
+            self._set_elided_meta_label(self.rawg_released_label, f"Released {released}")
+            self.rawg_released_label.setVisible(True)
+            has_any = True
+        else:
+            self.rawg_released_label.setVisible(False)
+
         genres = entry.get("rawg_genres")
         if genres:
-            lines.append(genres)
-        return "\n".join(lines)
+            self._set_elided_meta_label(self.rawg_genres_label, genres)
+            self.rawg_genres_label.setVisible(True)
+            has_any = True
+        else:
+            self.rawg_genres_label.setVisible(False)
+
+        self.rawg_meta_container.setVisible(has_any)
 
     def _show_entry_details(self, entry: dict) -> None:
         self.detail_title.setText(entry.get("title", ""))
         self.detail_text.setText(entry.get("text", ""))
         self.detail_meta.setText(entry.get("meta", ""))
-        rawg_text = self._format_rawg_meta(entry)
-        self.detail_rawg_meta.setText(rawg_text)
-        self.detail_rawg_meta.setVisible(bool(rawg_text))
+        self._update_rawg_meta_display(entry)
 
         self.start_btn.setVisible(True)
         self.finished_btn.setVisible(True)
