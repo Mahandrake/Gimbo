@@ -1,10 +1,12 @@
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QTextEdit,
-    QComboBox, QFileDialog, QFrame
+    QComboBox, QFileDialog, QFrame, QCompleter
 )
+from PySide6.QtCore import QStringListModel
 from ui.widgets.animated_buttons import SimpleButton
+from services.rawg_client import RawgClient
 
 
 class AddEntryModal(QWidget):
@@ -13,15 +15,32 @@ class AddEntryModal(QWidget):
 
     PLATFORMS = ["PC", "PlayStation", "Xbox", "Switch", "Mobile", "Other"]
 
+    RAWG_KEYS = ["rawg_id", "rawg_rating", "rawg_metacritic", "rawg_playtime", "rawg_released", "rawg_genres"]
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("addentrymodal")
         self.setAttribute(Qt.WA_StyledBackground, True)
         self._cover_path = None
-        self._editing_id = None   # <-- new: None means "add" mode, an id means "edit" mode
+        self._editing_id = None
+
+        self._pending_rawg = {k: None for k in self.RAWG_KEYS}
+        self._suggestion_map: dict[str, dict] = {}
+
+        self.rawg_client = RawgClient(self)
+        self.rawg_client.suggestions_ready.connect(self._on_suggestions_ready)
+        self.rawg_client.details_ready.connect(self._on_details_ready)
+        self.rawg_client.cover_ready.connect(self._on_cover_ready)
+        self.rawg_client.error.connect(self._on_rawg_error)
+
+        self._search_timer = QTimer(self)
+        self._search_timer.setSingleShot(True)
+        self._search_timer.setInterval(350)  # debounce - don't hit RAWG on every keystroke
+        self._search_timer.timeout.connect(self._trigger_search)
 
         self._build_ui()
         self._connect_signals()
+        self._setup_title_completer()
 
         self.hide()
 
@@ -94,6 +113,11 @@ class AddEntryModal(QWidget):
         cover_row.addStretch()
         card_layout.addLayout(cover_row)
 
+        self.rawg_status_label = QLabel("")
+        self.rawg_status_label.setObjectName("rawgstatuslabel")
+        self.rawg_status_label.setVisible(False)
+        card_layout.addWidget(self.rawg_status_label)
+
         # --- description (optional) ---
         desc_label = QLabel("Description (optional)")
         desc_label.setObjectName("sectionlabel")
@@ -115,6 +139,16 @@ class AddEntryModal(QWidget):
 
         outer_layout.addWidget(self.card)
 
+    def _setup_title_completer(self):
+        self._completer_model = QStringListModel(self)
+        self.title_completer = QCompleter(self._completer_model, self)
+        self.title_completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.title_completer.setCompletionMode(QCompleter.UnfilteredPopupCompletion)
+        self.title_completer.popup().setObjectName("rawgsuggestionpopup")
+        self.title_edit.setCompleter(self.title_completer)
+        self.title_completer.activated[str].connect(self._on_suggestion_activated)
+        self.title_edit.textEdited.connect(self._on_title_text_edited)
+
     def _connect_signals(self):
         self.add_cover_btn.clicked.connect(self._pick_cover)
         self.remove_cover_btn.clicked.connect(self._clear_cover)
@@ -128,6 +162,69 @@ class AddEntryModal(QWidget):
         # instead of getting stuck with an unresponsive, invisible overlay.
         if not self.card.geometry().contains(event.pos()):
             self.close_modal()
+
+    def _on_title_text_edited(self, _text: str):
+        self._search_timer.start()
+
+    def _trigger_search(self):
+        self.rawg_client.search_games(self.title_edit.text())
+
+    def _on_suggestions_ready(self, results: list[dict]):
+        self._suggestion_map.clear()
+        display_strings = []
+        for game in results:
+            year = (game.get("released") or "")[:4]
+            label = f"{game['name']} ({year})" if year else game["name"]
+            # de-dupe in the unlikely case RAWG returns two identical labels
+            if label in self._suggestion_map:
+                label = f"{label} #{game['id']}"
+            self._suggestion_map[label] = game
+            display_strings.append(label)
+        self._completer_model.setStringList(display_strings)
+
+    def _on_suggestion_activated(self, label: str):
+        game = self._suggestion_map.get(label)
+        if not game:
+            return
+        self.title_edit.setText(game["name"])
+        self.rawg_client.get_game_details(game["id"])
+
+    def _on_details_ready(self, details: dict):
+        self._pending_rawg = {
+            "rawg_id": details.get("rawg_id"),
+            "rawg_rating": details.get("rating"),
+            "rawg_metacritic": details.get("metacritic"),
+            "rawg_playtime": details.get("playtime"),
+            "rawg_released": details.get("released"),
+            "rawg_genres": details.get("genres"),
+        }
+        self.rawg_status_label.setText("✓ Linked via RAWG")
+        self.rawg_status_label.setVisible(True)
+
+        # Only fill the description if the user hasn't already written one -
+        # never clobber their own words with RAWG's blurb.
+        if not self.description_text.toPlainText().strip():
+            description = (details.get("description") or "").strip()
+            if description:
+                self.description_text.setPlainText(description[:600])
+
+        self.rawg_client.fetch_cover(details.get("rawg_id"), details.get("background_image"))
+
+    def _on_cover_ready(self, _image_url: str, local_path: str):
+        self._cover_path = local_path
+        pixmap = QPixmap(local_path)
+        if not pixmap.isNull():
+            scaled = pixmap.scaled(
+                self.cover_preview.width(), self.cover_preview.height(),
+                Qt.KeepAspectRatio, Qt.SmoothTransformation
+            )
+            self.cover_preview.setPixmap(scaled)
+            self.cover_preview.setVisible(True)
+            self.remove_cover_btn.setVisible(True)
+
+    def _on_rawg_error(self, message: str):
+        # Non-blocking - autocomplete failing shouldn't stop manual entry.
+        print(f"[rawg] {message}")
 
     def _pick_cover(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -160,6 +257,8 @@ class AddEntryModal(QWidget):
         self._clear_cover()
         self._editing_id = None
         self.header_label.setText("Add to Backlog")
+        self._pending_rawg = {k: None for k in self.RAWG_KEYS}
+        self.rawg_status_label.setVisible(False)
 
     def _save_entry(self):
         title = self.title_edit.text().strip()
@@ -178,6 +277,7 @@ class AddEntryModal(QWidget):
             "platform": platform,
             "description": self.description_text.toPlainText().strip(),
             "image_path": self._cover_path,
+            **self._pending_rawg,
         }
 
         if self._editing_id is not None:
@@ -196,7 +296,6 @@ class AddEntryModal(QWidget):
         if entry:
             self._editing_id = entry.get("id")
             self.header_label.setText("Edit Game")
-
             self.title_edit.setText(entry.get("title", ""))
 
             platform = entry.get("meta") or entry.get("platform", "")
@@ -212,21 +311,23 @@ class AddEntryModal(QWidget):
                 pixmap = QPixmap(image_path)
                 if not pixmap.isNull():
                     scaled = pixmap.scaled(
-                        self.cover_preview.width(),
-                        self.cover_preview.height(),
-                        Qt.KeepAspectRatio,
-                        Qt.SmoothTransformation
+                        self.cover_preview.width(), self.cover_preview.height(),
+                        Qt.KeepAspectRatio, Qt.SmoothTransformation
                     )
                     self.cover_preview.setPixmap(scaled)
                     self.cover_preview.setVisible(True)
                     self.remove_cover_btn.setVisible(True)
 
-        # --- existing reparent-to-top-level logic stays exactly the same ---
+            # preserve any existing RAWG linkage until/unless the user re-picks
+            if entry.get("rawg_id"):
+                self._pending_rawg = {k: entry.get(k) for k in self.RAWG_KEYS}
+                self.rawg_status_label.setText("✓ Linked via RAWG")
+                self.rawg_status_label.setVisible(True)
+
         top_level = self.window()
         if top_level is not None:
             self.setParent(top_level)
             self.setGeometry(top_level.rect())
-
             titlebar = getattr(top_level, "titlebar", None)
             titlebar_height = titlebar.height() if titlebar is not None else 0
             self._outer_layout.setContentsMargins(0, titlebar_height, 0, 120)
