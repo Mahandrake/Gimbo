@@ -128,7 +128,7 @@ class WritingPage(QWidget):
         root_layout.addWidget(screenshots_label)
 
         screenshot_btn_row = QHBoxLayout()
-        self.add_screenshot_btn = SimpleButton("Add Screenshot(s)", "animatedbutton", w=250, h=32)
+        self.add_screenshot_btn = SimpleButton("Add Screenshot(s)", "animatedbutton", w=380, h=32)
         screenshot_btn_row.addWidget(self.add_screenshot_btn)
         screenshot_btn_row.addStretch()
         root_layout.addLayout(screenshot_btn_row)

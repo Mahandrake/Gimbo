@@ -63,7 +63,15 @@ class AlbumWindow(QWidget):
         self.photos_container.setAttribute(Qt.WA_StyledBackground, True)
         self.grid_layout = QGridLayout(self.photos_container)
         self.grid_layout.setSpacing(30)
-        self.grid_layout.setAlignment(Qt.AlignTop | Qt.AlignCenter)
+        self.grid_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+
+        # Reserve exactly CARD_COLUMNS fixed-width columns and push any leftover
+        # horizontal space into an invisible trailing column, so a row with
+        # fewer than 5 photos keeps them pinned to their own column instead of
+        # spreading out (stretching) or being centered as a group.
+        for col in range(self.CARD_COLUMNS):
+            self.grid_layout.setColumnStretch(col, 0)
+        self.grid_layout.setColumnStretch(self.CARD_COLUMNS, 1)
 
         self.scroll_area.setWidget(self.photos_container)
         root_layout.addWidget(self.scroll_area)

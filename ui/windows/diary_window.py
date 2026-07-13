@@ -223,7 +223,7 @@ class DiaryWindow(QWidget):
         # layout with addWidget/removeWidget, which just detaches it without
         # destroying the underlying widget. This is what was breaking before:
         # the old code deleted this same button on every rebuild.
-        add_shot_btn = SimpleButton("Add Screenshot(s)", "animatedbutton", w=280, h=150, parent=shots_container)
+        add_shot_btn = SimpleButton("Add Screenshot(s)", "animatedbutton", w=400, h=150, parent=shots_container)
         add_shot_btn.hide()
 
         def on_delete_screenshot_clicked(screenshot_id: int):
